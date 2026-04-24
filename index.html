@@ -947,73 +947,69 @@ async function handleSubmit(){
   let aiMsg="";
   let teamsOk=false;
 
-  try{
-    // 1. Generate message with Anthropic API
-    const aiRes=await fetch("https://api.anthropic.com/v1/messages",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        model:"claude-sonnet-4-20250514",
-        max_tokens:512,
-        messages:[{role:"user",content:`Genera un mensaje de agradecimiento corto en español para Teams dirigido a "${msUser.name}".
-Datos encuesta TI Celaque:
-- Puntuación: ${sc}/100 (${ov})
-- Áreas a mejorar: ${allImp.length>0?allImp.join(", "):"ninguna"}
-- Sugerencia: "${sug}"
-- Juego: ${gameScoreFinal}/${GAME_ROUNDS} aciertos
-Tono: cálido, con humor hondureño. Máximo 4 oraciones. Firmado: "Equipo de TI — mayITa 🦜"
-Solo el mensaje, sin explicaciones.`}]
-      })
-    });
-    const aiData=await aiRes.json();
-    aiMsg=aiData?.content?.[0]?.text||`¡Hola ${msUser.name}! 🦜 Gracias por completar la encuesta. Tus comentarios son valiosísimos para nosotros. ¡Hasta la próxima! — Equipo de TI — mayITa 🦜`;
+  // Generar mensaje localmente (la API de Anthropic no se puede llamar
+  // directamente desde el browser por CORS — se necesitaría un backend)
+  const scoreEmoji = sc >= 80 ? "🌟" : sc >= 60 ? "😊" : sc >= 40 ? "🙏" : "💪";
+  const scoreWord  = sc >= 80 ? "excelente" : sc >= 60 ? "muy buena" : sc >= 40 ? "regular" : "con áreas importantes a mejorar";
+  const impText    = allImp.length > 0 ? ` Tomamos nota especialmente de: ${allImp.join(", ")}.` : "";
+  const sugText    = sug ? ` Tu sugerencia "${sug}" será revisada por el equipo.` : "";
 
-    // 2. Envío a Teams via Microsoft Graph API
-    let tokenForGraph = msUser.token;
+  aiMsg = `¡Hola ${msUser.name}! ${scoreEmoji} Gracias por completar la encuesta de satisfacción de TI — tu calificación fue ${scoreWord} (${sc}/100).${impText}${sugText} ¡Que la tecnología te sea leve! — Equipo de TI — mayITa 🦜`;
+
+  // 2. Envío a Teams via Microsoft Graph API
+  let tokenForGraph = msUser.token;
+  try {
+    const accounts = msalApp.getAllAccounts();
+    if (accounts.length > 0) {
+      const tr = await msalApp.acquireTokenSilent({scopes: SCOPES, account: accounts[0]});
+      tokenForGraph = tr.accessToken;
+    }
+  } catch(e) {
+    console.warn("Silent token failed, trying popup:", e);
     try {
       const accounts = msalApp.getAllAccounts();
-      if (accounts.length > 0) {
-        const tr = await msalApp.acquireTokenSilent({scopes: SCOPES, account: accounts[0]});
-        tokenForGraph = tr.accessToken;
-      }
-    } catch(e) {
-      console.warn("Silent token failed, trying popup:", e);
-      try {
-        const accounts = msalApp.getAllAccounts();
-        const tr = await msalApp.acquireTokenPopup({scopes: SCOPES, account: accounts[0]});
-        tokenForGraph = tr.accessToken;
-      } catch(e2) { console.warn("Token popup also failed:", e2); }
-    }
+      const tr = await msalApp.acquireTokenPopup({scopes: SCOPES, account: accounts[0]});
+      tokenForGraph = tr.accessToken;
+    } catch(e2) { console.warn("Token popup also failed:", e2); }
+  }
 
     const teamsPermGranted = !!tokenForGraph;
+    console.log("🔑 Token for Graph:", tokenForGraph ? "OK ("+tokenForGraph.substring(0,20)+"...)" : "MISSING");
     if (teamsPermGranted) {
       const graphHeaders = {"Authorization":`Bearer ${tokenForGraph}`,"Content-Type":"application/json"};
       try {
         const htmlContent = `<p>${aiMsg.replace(/\n/g,"<br/>")}</p>`;
         let sent = false;
 
-        // Estrategia 1: Buscar chats existentes del usuario y enviar al primero disponible
+        // Estrategia 1: Buscar chats existentes
         try {
+          console.log("📡 Strategy 1: GET /me/chats");
           const chatsRes = await fetch("https://graph.microsoft.com/v1.0/me/chats?$top=5", {headers: graphHeaders});
           const chatsData = await chatsRes.json();
+          console.log("📡 Strategy 1 chats response:", JSON.stringify(chatsData).substring(0,300));
           const chats = chatsData.value || [];
           if (chats.length > 0) {
-            // Buscar un chat oneOnOne primero, sino usar cualquiera
             const chat = chats.find(c => c.chatType === "oneOnOne") || chats[0];
+            console.log("📡 Strategy 1: sending to chat", chat.id);
             const msgRes = await fetch(`https://graph.microsoft.com/v1.0/chats/${chat.id}/messages`, {
               method:"POST", headers:graphHeaders,
               body: JSON.stringify({body:{contentType:"html",content:htmlContent}})
             });
-            if (msgRes.ok) { teamsOk = true; sent = true; }
+            const msgData = await msgRes.json();
+            console.log("📡 Strategy 1 msg response:", msgRes.status, JSON.stringify(msgData).substring(0,200));
+            if (msgRes.ok) { teamsOk = true; sent = true; console.log("✅ Strategy 1 SUCCESS"); }
+          } else {
+            console.log("📡 Strategy 1: no chats found");
           }
-        } catch(e1) { console.warn("Strategy 1 failed:", e1); }
+        } catch(e1) { console.warn("❌ Strategy 1 failed:", e1); }
 
-        // Estrategia 2: Crear chat con el admin como receptor
+        // Estrategia 2: Crear chat oneOnOne
         if (!sent) {
           try {
-            // Obtener ID del admin (quien tiene los permisos)
+            console.log("📡 Strategy 2: GET /me");
             const meRes = await fetch("https://graph.microsoft.com/v1.0/me", {headers: graphHeaders});
             const me = await meRes.json();
+            console.log("📡 Strategy 2: me.id =", me.id, "user.id =", msUser.id);
             const createRes = await fetch("https://graph.microsoft.com/v1.0/chats", {
               method:"POST", headers:graphHeaders,
               body: JSON.stringify({
@@ -1025,43 +1021,51 @@ Solo el mensaje, sin explicaciones.`}]
               })
             });
             const chatData = await createRes.json();
+            console.log("📡 Strategy 2 chat response:", createRes.status, JSON.stringify(chatData).substring(0,300));
             if (chatData.id) {
               const msgRes = await fetch(`https://graph.microsoft.com/v1.0/chats/${chatData.id}/messages`, {
                 method:"POST", headers:graphHeaders,
                 body: JSON.stringify({body:{contentType:"html",content:htmlContent}})
               });
-              if (msgRes.ok) { teamsOk = true; sent = true; }
+              const msgData = await msgRes.json();
+              console.log("📡 Strategy 2 msg response:", msgRes.status, JSON.stringify(msgData).substring(0,200));
+              if (msgRes.ok) { teamsOk = true; sent = true; console.log("✅ Strategy 2 SUCCESS"); }
             }
-          } catch(e2) { console.warn("Strategy 2 failed:", e2); }
+          } catch(e2) { console.warn("❌ Strategy 2 failed:", e2); }
         }
 
-        // Estrategia 3: Enviar como mensaje en el primer canal al que el usuario tiene acceso
+        // Estrategia 3: Canal de Teams
         if (!sent) {
           try {
+            console.log("📡 Strategy 3: GET /me/joinedTeams");
             const teamsRes = await fetch("https://graph.microsoft.com/v1.0/me/joinedTeams", {headers: graphHeaders});
             const teamsData = await teamsRes.json();
+            console.log("📡 Strategy 3 teams:", JSON.stringify(teamsData).substring(0,300));
             const teams = teamsData.value || [];
             if (teams.length > 0) {
               const channelsRes = await fetch(`https://graph.microsoft.com/v1.0/teams/${teams[0].id}/channels`, {headers: graphHeaders});
               const channelsData = await channelsRes.json();
               const channels = channelsData.value || [];
+              console.log("📡 Strategy 3 channels:", channels.length);
               if (channels.length > 0) {
                 const msgRes = await fetch(`https://graph.microsoft.com/v1.0/teams/${teams[0].id}/channels/${channels[0].id}/messages`, {
                   method:"POST", headers:graphHeaders,
-                  body: JSON.stringify({body:{contentType:"html",content:`<p><strong>@${msUser.name}</strong> — ${htmlContent}</p>`}})
+                  body: JSON.stringify({body:{contentType:"html",content:`<p><strong>${msUser.name}</strong> — ${htmlContent}</p>`}})
                 });
-                if (msgRes.ok) { teamsOk = true; }
+                const msgData = await msgRes.json();
+                console.log("📡 Strategy 3 msg response:", msgRes.status, JSON.stringify(msgData).substring(0,200));
+                if (msgRes.ok) { teamsOk = true; console.log("✅ Strategy 3 SUCCESS"); }
               }
             }
-          } catch(e3) { console.warn("Strategy 3 failed:", e3); }
+          } catch(e3) { console.warn("❌ Strategy 3 failed:", e3); }
         }
 
+        if (!teamsOk) console.error("❌ ALL STRATEGIES FAILED");
+
       } catch(teamsErr) { console.warn("Teams send error:", teamsErr); }
+    } else {
+      console.error("❌ No token available for Graph API");
     }
-  } catch(e) {
-    console.error("Submit error:",e);
-    aiMsg=`¡Hola ${msUser.name}! 🦜 Gracias por tu tiempo y honestidad. Lo tomamos muy en serio. ¡Que la tecnología te sea leve! — Equipo de TI — mayITa 🦜`;
-  }
 
   // Show done screen
   document.getElementById("done-title").textContent=`¡Gracias, ${msUser.name}! 🎉`;
