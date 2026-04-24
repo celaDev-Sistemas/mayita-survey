@@ -348,9 +348,9 @@ const MSAL_CONFIG = {
   cache: { cacheLocation: "sessionStorage", storeAuthStateInCookie: true },
   system: { allowNativeBroker: false }
 };
-// Solo User.Read para login — no requiere consentimiento de admin
-const SCOPES = ["User.Read"];
-const SCOPES_TEAMS = ["User.Read","Chat.ReadWrite","ChatMessage.Send"];
+// Todos los permisos desde el login — ya tienen admin consent
+const SCOPES = ["User.Read", "Chat.ReadWrite", "ChatMessage.Send"];
+const SCOPES_TEAMS = SCOPES;
 const VALID_DOMAINS = ["celaque.net","administracion.hn"];
 
 // ════════════════════════════════════════════════════
@@ -576,8 +576,8 @@ async function msLogin(){
   errEl.classList.remove("show");
   try{
     await initMSAL();
-    // Solo User.Read — no requiere admin consent
-    const result = await msalApp.loginPopup({scopes:SCOPES});
+    // Pedir todos los permisos en el login (ya tienen admin consent)
+    const result = await msalApp.loginPopup({scopes: SCOPES});
     // Fetch user profile
     const meRes = await fetch("https://graph.microsoft.com/v1.0/me",{
       headers:{Authorization:`Bearer ${result.accessToken}`}
@@ -969,31 +969,23 @@ Solo el mensaje, sin explicaciones.`}]
     aiMsg=aiData?.content?.[0]?.text||`¡Hola ${msUser.name}! 🦜 Gracias por completar la encuesta. Tus comentarios son valiosísimos para nosotros. ¡Hasta la próxima! — Equipo de TI — mayITa 🦜`;
 
     // 2. Envío a Teams via Microsoft Graph API
-    // Pedimos permisos de Teams de forma incremental (solo al enviar)
     let tokenForGraph = msUser.token;
-    let teamsPermGranted = false;
     try {
       const accounts = msalApp.getAllAccounts();
       if (accounts.length > 0) {
-        // Intentar silencioso primero
-        try {
-          const tr = await msalApp.acquireTokenSilent({scopes: SCOPES_TEAMS, account: accounts[0]});
-          tokenForGraph = tr.accessToken;
-          teamsPermGranted = true;
-        } catch(silentErr) {
-          // Si falla silencioso, pedir popup incremental para Teams
-          try {
-            const tr = await msalApp.acquireTokenPopup({scopes: SCOPES_TEAMS, account: accounts[0]});
-            tokenForGraph = tr.accessToken;
-            teamsPermGranted = true;
-          } catch(popupErr) {
-            console.warn("Teams perms not granted:", popupErr.message);
-            teamsPermGranted = false;
-          }
-        }
+        const tr = await msalApp.acquireTokenSilent({scopes: SCOPES, account: accounts[0]});
+        tokenForGraph = tr.accessToken;
       }
-    } catch(e) { console.warn("Token refresh failed:", e); }
+    } catch(e) {
+      console.warn("Silent token failed, trying popup:", e);
+      try {
+        const accounts = msalApp.getAllAccounts();
+        const tr = await msalApp.acquireTokenPopup({scopes: SCOPES, account: accounts[0]});
+        tokenForGraph = tr.accessToken;
+      } catch(e2) { console.warn("Token popup also failed:", e2); }
+    }
 
+    const teamsPermGranted = !!tokenForGraph;
     if (teamsPermGranted) {
       const graphHeaders = {"Authorization":`Bearer ${tokenForGraph}`,"Content-Type":"application/json"};
       try {
