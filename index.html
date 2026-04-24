@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>mayITa te escucha 🦜 — TI Celaque</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.27.0/lib/msal-browser.min.js"></script>
+<style>
+:root {
+  --red:#e01c0e; --orange:#f97316; --yellow:#eab308;
+  --green:#22c55e; --blue:#38bdf8; --purple:#a855f7;
+  --bg1:#1a0800; --bg2:#3d1200; --bg3:#1a0030;
+  --card:rgba(255,255,255,.065);
+  --border:rgba(255,255,255,.13);
+  --text:rgba(255,255,255,.88);
+  --muted:rgba(255,255,255,.45);
+  --dim:rgba(255,255,255,.22);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{min-height:100%;font-family:'Nunito',sans-serif;}
+body{
+  background:linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 45%,var(--bg3) 100%);
+  min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+  position:relative;overflow-x:hidden;
+}
+
+/* ─ Background orbs ─ */
+body::before,body::after{
+  content:'';position:fixed;border-radius:50%;pointer-events:none;
+  filter:blur(80px);opacity:.18;
+}
+body::before{width:400px;height:400px;background:var(--red);top:-100px;left:-100px;}
+body::after{width:500px;height:500px;background:var(--purple);bottom:-150px;right:-150px;}
+
+/* ─ Card ─ */
+.card{
+  background:var(--card);
+  backdrop-filter:blur(28px);
+  border:1px solid var(--border);
+  border-radius:28px;
+  padding:36px 32px;
+  max-width:500px;width:100%;
+  box-shadow:0 32px 80px rgba(0,0,0,.55);
+  position:relative;
+  animation:fadeUp .45s ease both;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+/* ─ Particles ─ */
+.particle{
+  position:fixed;font-size:1.5rem;pointer-events:none;z-index:9999;
+  animation:partFall 1.6s ease-out forwards;
+  left:50%;top:40%;
+}
+@keyframes partFall{to{transform:translate(var(--dx),var(--dy)) rotate(var(--rot));opacity:0;}}
+
+/* ─ Typography ─ */
+.page-title{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:#fff;text-align:center;letter-spacing:-.5px;margin-bottom:4px;}
+.page-title span{color:#ff8c42;}
+.section-sub{text-align:center;color:var(--muted);font-size:.73rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;}
+.sec-title{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;color:#fff;text-align:center;margin-bottom:4px;}
+
+/* ─ User badge ─ */
+.user-badge{display:flex;align-items:center;gap:9px;margin-bottom:16px;}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#ff6a00,#e8001d);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.88rem;color:#fff;flex-shrink:0;}
+.user-name{color:rgba(255,255,255,.75);font-size:.82rem;font-weight:800;}
+.user-email{margin-left:auto;color:var(--dim);font-size:.7rem;}
+
+/* ─ Inputs ─ */
+.input{
+  width:100%;background:rgba(255,255,255,.08);
+  border:2px solid rgba(255,255,255,.18);
+  border-radius:14px;padding:12px 16px;
+  color:#fff;font-size:.95rem;font-family:'Nunito',sans-serif;
+  outline:none;transition:border-color .2s,background .2s;
+}
+.input:focus{border-color:#ff6a00;background:rgba(255,255,255,.12);}
+.input::placeholder{color:rgba(255,255,255,.3);}
+.input.err{border-color:#ef4444!important;}
+textarea.input{resize:vertical;min-height:100px;}
+.field-label{color:var(--muted);font-size:.74rem;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;display:block;margin-bottom:8px;margin-top:16px;}
+.field-label .req{color:#ef4444;}
+.err-msg{color:#f87171;font-size:.76rem;font-weight:800;margin-top:6px;display:none;}
+.err-msg.show{display:flex;align-items:center;gap:5px;}
+
+/* ─ Buttons ─ */
+.btn-primary{
+  width:100%;padding:15px;border-radius:16px;border:none;
+  background:linear-gradient(135deg,#ff6a00,#e8001d);
+  color:#fff;font-family:'Nunito',sans-serif;font-weight:900;font-size:1rem;
+  cursor:pointer;margin-top:16px;
+  transition:transform .15s,box-shadow .15s;
+  box-shadow:0 6px 22px rgba(232,0,29,.42);
+}
+.btn-primary:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 30px rgba(232,0,29,.58);}
+.btn-primary:disabled{opacity:.38;cursor:not-allowed;}
+
+.btn-ms{
+  width:100%;padding:13px 20px;border-radius:14px;
+  border:2px solid rgba(255,255,255,.2);
+  background:rgba(255,255,255,.09);
+  color:#fff;font-family:'Nunito',sans-serif;font-weight:800;font-size:.95rem;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px;
+  transition:all .2s;margin-top:10px;
+}
+.btn-ms:hover:not(:disabled){background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.45);transform:translateY(-1px);}
+.btn-ms:disabled{opacity:.45;cursor:not-allowed;}
+.ms-logo{width:20px;height:20px;flex-shrink:0;}
+
+/* ─ Hint text ─ */
+.hint{text-align:center;color:var(--dim);font-size:.7rem;margin-top:10px;}
+
+/* ─ Parrot SVG animations ─ */
+.parrot-wrap{display:flex;justify-content:center;margin-bottom:14px;}
+.parrot-svg{overflow:visible;filter:drop-shadow(0 10px 32px rgba(0,0,0,.55));}
+.parrot-idle{animation:pFloat 3.2s ease-in-out infinite;}
+.parrot-bounce{animation:pBounce .55s cubic-bezier(.36,.07,.19,.97) both;}
+@keyframes pFloat{0%,100%{transform:translateY(0) rotate(0)}33%{transform:translateY(-10px) rotate(-2deg)}66%{transform:translateY(-5px) rotate(2deg)}}
+@keyframes pBounce{0%{transform:scale(1)}20%{transform:translateY(-22px) scale(.94)}45%{transform:translateY(0) scale(1.1)}65%{transform:translateY(-9px) scale(.97)}80%{transform:translateY(0) scale(1.04)}100%{transform:scale(1)}}
+
+/* ─ Reaction bubble ─ */
+.bubble-wrap{position:relative;display:flex;justify-content:center;padding-top:36px;margin-bottom:8px;}
+.bubble{
+  position:absolute;top:0;left:50%;transform:translateX(-50%);
+  background:#fff;color:#1a0800;border-radius:20px;
+  padding:10px 18px;font-size:.84rem;font-weight:800;
+  box-shadow:0 6px 26px rgba(0,0,0,.38);
+  max-width:300px;text-align:center;z-index:10;
+  animation:bPop .35s cubic-bezier(.34,1.56,.64,1) both;
+  white-space:normal;
+}
+.bubble .tail-border,.bubble .tail-white{
+  position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);
+  width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;
+}
+.bubble .tail-white{bottom:-7px;border-left-width:7px;border-right-width:7px;border-top:7px solid #fff;}
+@keyframes bPop{0%{opacity:0;transform:translateX(-50%) scale(.5)}65%{transform:translateX(-50%) scale(1.06)}100%{opacity:1;transform:translateX(-50%) scale(1)}}
+
+/* ─ Likert ─ */
+.likert-bar{height:8px;border-radius:4px;background:linear-gradient(to right,#e02020,#f97316,#eab308,#22c55e,#38bdf8);margin-bottom:14px;position:relative;}
+.likert-thumb{position:absolute;top:50%;transform:translate(-50%,-50%);width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);transition:left .3s cubic-bezier(.34,1.56,.64,1),background .3s;pointer-events:none;display:none;}
+.likert-options{display:flex;gap:6px;}
+.lk-btn{
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:12px 6px 10px;border-radius:16px;border:2.5px solid transparent;
+  cursor:pointer;font-family:'Nunito',sans-serif;font-weight:900;
+  flex:1;min-width:0;transition:all .2s cubic-bezier(.34,1.56,.64,1);
+  position:relative;text-align:center;background:none;
+}
+.lk-btn:not(:disabled):not(.sel):hover{transform:translateY(-5px) scale(1.06);}
+.lk-btn.sel{transform:translateY(-6px) scale(1.1)!important;}
+.lk-btn.sel::after{content:'✓';position:absolute;top:4px;right:5px;background:rgba(255,255,255,.3);color:#fff;width:15px;height:15px;border-radius:50%;font-size:.62rem;font-weight:900;display:flex;align-items:center;justify-content:center;line-height:15px;}
+.lk-btn:disabled{cursor:not-allowed;opacity:.4;}
+.lk-icon{font-size:1.7rem;line-height:1;}
+.lk-num{font-size:.7rem;}
+.lk-lbl{font-size:.67rem;opacity:.9;line-height:1.1;}
+
+/* ─ Progress dots ─ */
+.prog-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.prog-dots{display:flex;gap:5px;}
+.prog-dot{height:10px;border-radius:5px;transition:all .3s ease;background:rgba(255,255,255,.18);}
+
+/* ─ Score box ─ */
+.score-box{background:rgba(255,255,255,.07);border-radius:16px;padding:12px 18px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;}
+.score-label{font-size:.7rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+.score-big{font-size:2rem;font-weight:900;line-height:1;}
+.score-sub{font-size:.85rem;color:rgba(255,255,255,.32);}
+
+/* ─ Summary answers ─ */
+.answer-row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.07);gap:10px;}
+.answer-q{color:rgba(255,255,255,.58);font-size:.82rem;flex:1;line-height:1.4;}
+.answer-tag{border-radius:20px;padding:3px 11px;font-weight:900;font-size:.77rem;white-space:nowrap;border:1px solid;}
+
+/* ─ Improvement ─ */
+.imp-list{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;}
+.imp-btn{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;
+  border-radius:12px;border:2px solid rgba(255,255,255,.15);
+  background:rgba(255,255,255,.06);color:rgba(255,255,255,.7);
+  font-family:'Nunito',sans-serif;font-weight:800;font-size:.88rem;
+  cursor:pointer;transition:all .18s;width:100%;text-align:left;
+}
+.imp-btn:hover{border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.1);color:#fff;}
+.imp-btn.sel{border-color:#ff6a00;background:rgba(255,106,0,.18);color:#fff;}
+.imp-check{width:18px;height:18px;border-radius:5px;border:2px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.65rem;transition:all .18s;}
+.imp-btn.sel .imp-check{background:#ff6a00;border-color:#ff6a00;color:#fff;}
+.other-input-wrap{padding-left:8px;margin-top:6px;display:none;}
+.other-input-wrap.show{display:block;animation:fadeUp .3s ease;}
+
+/* ─ Improvement tags ─ */
+.imp-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
+.imp-tag{background:rgba(255,106,0,.2);color:#ff8c42;border:1px solid rgba(255,106,0,.35);border-radius:20px;padding:3px 11px;font-size:.77rem;font-weight:800;}
+
+/* ─ Game ─ */
+.game-arena{position:relative;width:100%;height:300px;overflow:hidden;border-radius:18px;background:linear-gradient(180deg,rgba(100,200,255,.06),rgba(0,100,50,.08));border:1px solid rgba(255,255,255,.1);margin-bottom:14px;}
+.food-item{position:absolute;font-size:2.2rem;cursor:pointer;user-select:none;z-index:10;top:-60px;animation:foodFall var(--dur) linear forwards;}
+.food-item:active{transform:scale(.8);}
+@keyframes foodFall{from{top:-60px;transform:rotate(var(--rs))} to{top:310px;transform:rotate(var(--re));}}
+.parrot-game{position:absolute;bottom:0;left:50%;transform:translateX(-50%);z-index:5;transition:transform .15s;}
+.parrot-game.shake{animation:shake .35s ease both;}
+@keyframes shake{0%,100%{transform:translateX(-50%)}25%{transform:translateX(calc(-50% - 8px))}75%{transform:translateX(calc(-50% + 8px))}}
+.game-fb{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.45rem;font-weight:900;font-family:'Nunito',sans-serif;pointer-events:none;z-index:20;text-shadow:0 2px 8px rgba(0,0,0,.5);animation:fbAnim .9s ease forwards;}
+@keyframes fbAnim{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)} 25%{opacity:1;transform:translate(-50%,-50%) scale(1.1)} 60%{opacity:1;transform:translate(-50%,-50%) scale(1)} 100%{opacity:0;transform:translate(-50%,-70%) scale(1)}}
+.game-hint{position:absolute;top:8px;right:10px;background:rgba(0,0,0,.4);border-radius:10px;padding:3px 10px;color:rgba(255,255,255,.75);font-size:.7rem;font-weight:800;}
+.game-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.game-round{color:var(--muted);font-size:.74rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;}
+.game-score-badge{background:rgba(255,255,255,.08);border-radius:20px;padding:4px 14px;color:#fbbf24;font-weight:900;font-size:.88rem;}
+.game-progbar{height:5px;border-radius:3px;background:rgba(255,255,255,.1);margin-bottom:10px;overflow:hidden;}
+.game-progbar-fill{height:100%;border-radius:3px;background:linear-gradient(to right,#ff6a00,#fbbf24);transition:width .3s;}
+.game-result-score{font-size:2.4rem;font-weight:900;line-height:1;animation:popIn .4s ease;}
+@keyframes popIn{0%{transform:scale(0);opacity:0}70%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}
+.motivational{background:rgba(251,191,36,.1);border:1.5px solid rgba(251,191,36,.28);border-radius:14px;padding:12px 14px;margin-bottom:14px;color:#fbbf24;font-size:.88rem;font-weight:800;line-height:1.6;}
+
+/* ─ Teams / Done ─ */
+.teams-box{background:rgba(99,102,241,.1);border:1.5px solid rgba(99,102,241,.32);border-radius:16px;padding:16px;margin-bottom:14px;}
+.teams-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.teams-label{color:rgba(255,255,255,.4);font-size:.7rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
+.teams-status{margin-left:auto;padding:2px 10px;border-radius:20px;font-size:.7rem;font-weight:900;}
+.teams-status.ok{background:#22c55e22;color:#22c55e;border:1px solid #22c55e44;}
+.teams-status.warn{background:#f9731622;color:#fb923c;border:1px solid #f9731644;}
+.teams-msg{color:rgba(255,255,255,.85);font-size:.88rem;line-height:1.65;}
+.db-row{background:rgba(255,255,255,.05);border-radius:14px;padding:12px 14px;margin-bottom:14px;display:flex;gap:10px;align-items:center;}
+.db-icon{font-size:1.3rem;}
+.db-title{color:#fff;font-weight:800;font-size:.85rem;}
+.db-sub{color:rgba(255,255,255,.35);font-size:.73rem;}
+.db-ok{margin-left:auto;background:#22c55e22;color:#22c55e;border:1px solid #22c55e44;padding:2px 10px;border-radius:20px;font-size:.7rem;font-weight:900;}
+
+/* ─ Sending spinner ─ */
+.sending-parrot{font-size:3.5rem;display:inline-block;animation:pFloat 1.5s ease-in-out infinite;margin-bottom:14px;}
+.sending-title{color:#fff;font-weight:900;font-size:1.1rem;margin-bottom:6px;text-align:center;}
+.sending-sub{color:var(--muted);font-size:.88rem;text-align:center;}
+
+/* ─ Screens ─ */
+.screen{display:none;}.screen.active{display:block;animation:fadeUp .4s ease both;}
+
+/* ─ Steps description ─ */
+.step-desc{color:rgba(255,255,255,.68);text-align:center;font-size:.93rem;line-height:1.65;margin-bottom:22px;}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════ SCREEN: INTRO -->
+<div id="s-intro" class="card screen active">
+  <div class="page-title">mayITa <span>te escucha!</span> 🦜</div>
+  <div class="section-sub">Departamento de TI — Celaque</div>
+  <div class="parrot-wrap"><div id="intro-parrot"></div></div>
+  <p class="step-desc">
+    ¡Hola! Soy <strong style="color:#ff8c42">mayITa</strong> 🦜<br>
+    Primero jugaremos, luego <strong style="color:#fff">5 preguntas</strong> rápidas.
+  </p>
+  <div id="intro-err" class="err-msg">⚠ <span id="intro-err-text"></span></div>
+  <button class="btn-ms" id="btn-ms-login">
+    <svg class="ms-logo" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+    Iniciar sesión con Microsoft 365
+  </button>
+  <div class="hint">Solo cuentas @celaque.net · @administracion.hn</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ SCREEN: GAME -->
+<div id="s-game" class="card screen">
+  <div class="user-badge">
+    <div class="user-avatar" id="game-avatar-initial"></div>
+    <div class="user-name" id="game-user-name"></div>
+    <div class="user-email" id="game-user-email"></div>
+  </div>
+  <div id="game-inner"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ SCREEN: QUIZ -->
+<div id="s-quiz" class="card screen">
+  <div class="prog-row">
+    <span id="quiz-progress-label" style="color:rgba(255,255,255,.48);font-size:.76rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;"></span>
+    <div class="prog-dots" id="quiz-dots"></div>
+  </div>
+  <div class="bubble-wrap" id="bubble-wrap">
+    <div id="quiz-parrot"></div>
+  </div>
+  <p id="quiz-question" style="font-size:1.04rem;font-weight:800;color:#fff;text-align:center;margin-bottom:16px;line-height:1.5;"></p>
+  <div class="likert-bar"><div class="likert-thumb" id="likert-thumb"></div></div>
+  <div class="likert-options" id="likert-opts"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ SCREEN: IMPROVEMENT -->
+<div id="s-improvement" class="card screen">
+  <div class="sec-title">¿Qué podemos mejorar?</div>
+  <div class="section-sub">Selecciona todas las que apliquen</div>
+  <div class="score-box" id="imp-score-box"></div>
+  <div class="imp-list" id="imp-list"></div>
+  <button class="btn-primary" onclick="goToSuggestion()">Continuar a sugerencia →</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ SCREEN: SUGGESTION -->
+<div id="s-suggestion" class="card screen">
+  <div class="sec-title">Tu sugerencia 💡</div>
+  <div class="section-sub">Último paso · obligatorio</div>
+  <div class="parrot-wrap"><div id="sug-parrot"></div></div>
+  <div id="sug-imp-tags" class="imp-tags"></div>
+  <label class="field-label">¿Qué podría hacer mejor el equipo de TI? <span class="req">*</span></label>
+  <textarea class="input" id="sug-textarea" placeholder="Cuéntanos cómo podemos mejorar tu experiencia..."></textarea>
+  <div id="sug-err" class="err-msg">⚠ La sugerencia es obligatoria.</div>
+  <button class="btn-primary" id="btn-submit">Enviar y recibir mensaje en Teams 💬</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ SCREEN: SENDING -->
+<div id="s-sending" class="card screen" style="text-align:center;">
+  <div class="sending-parrot">🦜</div>
+  <div class="sending-title">Guardando y enviando…</div>
+  <div class="sending-sub">mayITa está generando tu mensaje de Teams con IA ✨</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ SCREEN: DONE -->
+<div id="s-done" class="card screen">
+  <div class="sec-title" id="done-title"></div>
+  <div class="section-sub">Respuestas guardadas</div>
+  <div class="parrot-wrap"><div id="done-parrot"></div></div>
+  <div class="teams-box">
+    <div class="teams-header">
+      <span style="font-size:1.1rem">💬</span>
+      <span class="teams-label">Mensaje Teams</span>
+      <span class="teams-status" id="teams-status-badge"></span>
+    </div>
+    <p class="teams-msg" id="teams-msg-text"></p>
+  </div>
+  <div class="db-row">
+    <div class="db-icon">🗄️</div>
+    <div>
+      <div class="db-title">Guardado en base de datos</div>
+      <div class="db-sub" id="db-sub-text"></div>
+    </div>
+    <div class="db-ok">✓ OK</div>
+  </div>
+  <button class="btn-primary" onclick="resetAll()">¡Nueva encuesta! 🔄</button>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════════════════
+const MSAL_CONFIG = {
+  auth: {
+    clientId: "9c04551b-3267-4a30-a212-ec9143838eb6",
+    authority: "https://login.microsoftonline.com/deb13623-4618-4c6b-a268-3d5e4dec1c30",
+    redirectUri: "https://celadev-sistemas.github.io/mayita-survey/",
+  },
+  cache: { cacheLocation: "sessionStorage", storeAuthStateInCookie: true },
+  system: { allowNativeBroker: false }
+};
+// Solo User.Read para login — no requiere consentimiento de admin
+const SCOPES = ["User.Read"];
+const SCOPES_TEAMS = ["User.Read","Chat.ReadWrite","ChatMessage.Send"];
+const VALID_DOMAINS = ["celaque.net","administracion.hn"];
+
+// ════════════════════════════════════════════════════
+// DATA
+// ════════════════════════════════════════════════════
+const QUESTIONS = [
+  "¿Cómo fue el tiempo de respuesta del equipo de TI?",
+  "¿El técnico resolvió tu problema de forma efectiva?",
+  "¿La comunicación del equipo de TI fue clara?",
+  "¿Quedaste satisfecho con la solución brindada?",
+  "¿Recomendarías el servicio de TI a un colega?"
+];
+const LIKERT = [
+  {v:1,lbl:"Muy malo", icon:"😠",color:"#e02020",mood:"malo1"},
+  {v:2,lbl:"Malo",     icon:"😟",color:"#f97316",mood:"malo2"},
+  {v:3,lbl:"Regular",  icon:"😐",color:"#eab308",mood:"regular"},
+  {v:4,lbl:"Bueno",    icon:"😊",color:"#22c55e",mood:"bueno"},
+  {v:5,lbl:"Excelente",icon:"😄",color:"#38bdf8",mood:"excelente"}
+];
+const REACTIONS = {
+  malo1:    ["¡Vaya! Eso no estuvo bien. ¡Lo arreglaremos! 😱","¡Qué pena! Haremos todo para mejorar. 🙈","¡Eso duele, pero necesitamos saberlo! 😭","¡Error grave detectado! Modo urgente ON. 🚨","¡Lo sentimos mucho! Cambios vienen ya. 😰"],
+  malo2:    ["Hmm, algo salió mal. ¡Trabajamos en ello! 😬","¡Oops! No fue lo ideal. Tomamos nota. 😅","¡Se puede mejorar, lo sabemos! 🤔","¡Modo mejora activado al 100%! 🛠️","¡Gracias por la honestidad! Mejoramos. 😤"],
+  regular:  ["¡Bien, pero podemos ser mejores! 🧐","¡Aceptado el reto de mejorar! 💪","Neutro por ahora, ¡pronto excelente! 😐","¡Lo anotamos y lo trabajamos! 📝","¡Modo superación activado! 🚀"],
+  bueno:    ["¡Genial! ¡Eso es lo que queremos! 😊","¡Bien hecho equipo! ¡Seguimos así! 🥳","¡Crack total! El equipo da el 200%! 💪","¡Eso me alegra muchísimo! 🤩","¡Rumbo a la excelencia! 🚀"],
+  excelente:["¡¡WOOOW!! ¡¡EL MEJOR EQUIPO!! 🏆","¡¡CAMPEONES!! ¡Así se hace en TI! 🎉","¡¡FIESTA!! ¡El equipo está on FIRE! 🔥","¡¡INCREÍBLE!! ¡Eres lo máximo! ⭐","¡¡AL 100%!! ¡Nada nos detiene! 🚀"]
+};
+const IMPROVEMENT_OPTIONS = ["Tiempo de respuesta","Conocimiento técnico","Comunicación y trato","Calidad de la solución","Seguimiento post-atención","Otra"];
+const FOODS = [
+  {e:"🍇",n:"Uvas",ok:true},{e:"🌽",n:"Maíz",ok:true},{e:"🥭",n:"Mango",ok:true},
+  {e:"🍌",n:"Banano",ok:true},{e:"🍓",n:"Fresa",ok:true},{e:"🥜",n:"Maní",ok:true},
+  {e:"🍍",n:"Piña",ok:true},{e:"🌶️",n:"Chile",ok:true},
+  {e:"🍕",n:"Pizza",ok:false},{e:"🍔",n:"Hamburguesa",ok:false},{e:"🍟",n:"Papas",ok:false},
+  {e:"🍩",n:"Dona",ok:false},{e:"🥤",n:"Refresco",ok:false},{e:"🍫",n:"Chocolate",ok:false},
+  {e:"⚙️",n:"Tornillo",ok:false},{e:"🖥️",n:"Monitor roto",ok:false}
+];
+const GAME_ROUNDS = 8;
+const MOTIV = [
+  "¡Eres increíble! Cada reto es una oportunidad disfrazada. 🚀",
+  "¡El éxito es la suma de pequeños esfuerzos repetidos! 💪",
+  "¡Tú tienes el poder de hacer la diferencia hoy! ⭐",
+  "¡Los campeones no se rinden, se reinventan! 🏆",
+  "¡Cada día es una nueva oportunidad de brillar! ✨"
+];
+
+// ════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════
+let msalApp = null;
+let msUser  = {name:"",email:"",id:"",token:""};
+let surveyAnswers = [];
+let currentQ = 0;
+let answering = false;
+let selectedVal = null;
+let improvements = [];
+let otherText = "";
+let showOther = false;
+let gameScoreFinal = 0;
+let dbCount = 0;
+
+// ════════════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════════════
+function shuffle(a){return [...a].sort(()=>Math.random()-.5);}
+function getScore(){
+  const t=surveyAnswers.reduce((s,a)=>s+a,0);
+  return Math.round((t/(surveyAnswers.length*5))*100);
+}
+function getLabel(sc){
+  if(sc>=80)return "excelente";if(sc>=60)return "bueno";
+  if(sc>=40)return "regular";if(sc>=20)return "malo2";return "malo1";
+}
+function getMoodFromVal(v){return LIKERT.find(l=>l.v===v)?.mood||"idle";}
+function getLikertByMood(m){return LIKERT.find(l=>l.mood===m)||LIKERT[2];}
+function getLikertByVal(v){return LIKERT.find(l=>l.v===v)||LIKERT[2];}
+function nameFromEmail(e){return e.split("@")[0].replace(/[._]/g," ").replace(/\b\w/g,c=>c.toUpperCase());}
+
+function showScreen(id){
+  document.querySelectorAll(".screen").forEach(s=>{s.classList.remove("active");});
+  const el=document.getElementById(id);
+  if(el){el.classList.add("active");}
+}
+
+// ════════════════════════════════════════════════════
+// PARROT SVG
+// ════════════════════════════════════════════════════
+function parrotSVG(mood="idle", size=180){
+  const cfg={
+    idle:     {ey:78,es:14,mouth:"idle",   brow:"idle",    blush:false,tears:false,sparkle:false},
+    malo1:    {ey:82,es:13,mouth:"malo",   brow:"malo",    blush:false,tears:true, sparkle:false},
+    malo2:    {ey:81,es:13,mouth:"malo",   brow:"malo",    blush:false,tears:false,sparkle:false},
+    regular:  {ey:80,es:13,mouth:"reg",   brow:"reg",     blush:false,tears:false,sparkle:false},
+    bueno:    {ey:76,es:15,mouth:"good",  brow:"good",    blush:true, tears:false,sparkle:false},
+    excelente:{ey:74,es:16,mouth:"good",  brow:"exc",     blush:true, tears:false,sparkle:true},
+    done:     {ey:75,es:16,mouth:"good",  brow:"good",    blush:true, tears:false,sparkle:true},
+    eat:      {ey:76,es:15,mouth:"eat",   brow:"good",    blush:true, tears:false,sparkle:false},
+    disgust:  {ey:82,es:13,mouth:"malo",  brow:"malo",    blush:false,tears:true, sparkle:false},
+  };
+  const m=cfg[mood]||cfg.idle;
+  const ey=m.ey,es=m.es;
+  const h=Math.round(size*192/180);
+
+  const mouths={
+    idle:`<path d="M82 102 Q90 108 98 102" stroke="#3d1a00" stroke-width="2.5" fill="none" stroke-linecap="round"/>`,
+    good:`<path d="M77 100 Q90 120 103 100" stroke="#3d1a00" stroke-width="2.5" fill="#ff6b6b" stroke-linecap="round"/>`,
+    reg: `<path d="M82 106 Q90 106 98 106" stroke="#3d1a00" stroke-width="2.5" fill="none" stroke-linecap="round"/>`,
+    malo:`<path d="M80 110 Q90 101 100 110" stroke="#3d1a00" stroke-width="2.5" fill="none" stroke-linecap="round"/>`,
+    eat: `<path d="M76 100 Q90 120 104 100" stroke="#3d1a00" stroke-width="2.5" fill="#ff6b6b" stroke-linecap="round"/>
+          <ellipse cx="90" cy="109" rx="9" ry="5" fill="#e03030" opacity="0.4"/>`,
+  };
+  const brows={
+    idle:"",
+    good:`<path d="M60 62 Q72 54 80 60" stroke="#3d1a00" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M100 60 Q108 54 120 62" stroke="#3d1a00" stroke-width="2.5" fill="none" stroke-linecap="round"/>`,
+    exc: `<path d="M58 60 Q72 48 82 57" stroke="#3d1a00" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M98 57 Q108 48 122 60" stroke="#3d1a00" stroke-width="2.5" fill="none" stroke-linecap="round"/>`,
+    reg: `<path d="M62 65 Q72 60 80 63" stroke="#3d1a00" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M100 63 Q108 60 118 65" stroke="#3d1a00" stroke-width="2" fill="none" stroke-linecap="round"/>`,
+    malo:`<path d="M60 60 Q72 68 80 62" stroke="#3d1a00" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M100 62 Q108 68 120 60" stroke="#3d1a00" stroke-width="2.5" fill="none" stroke-linecap="round"/>`,
+  };
+
+  return `<svg width="${size}" height="${h}" viewBox="0 0 180 192" class="parrot-svg parrot-idle" style="overflow:visible;">
+    ${m.sparkle?`<text x="14" y="48" font-size="13" style="user-select:none">⭐</text><text x="148" y="42" font-size="11" style="user-select:none">✨</text>`:""}
+    <ellipse cx="90" cy="156" rx="42" ry="38" fill="#e01c0e"/>
+    <ellipse cx="43"  cy="149" rx="21" ry="31" fill="#e01c0e" transform="rotate(-15 43 149)"/>
+    <ellipse cx="37"  cy="153" rx="10" ry="22" fill="#1a9e3f" transform="rotate(-20 37 153)"/>
+    <ellipse cx="30"  cy="159" rx="8"  ry="18" fill="#1565c0" transform="rotate(-26 30 159)"/>
+    <ellipse cx="25"  cy="166" rx="7"  ry="14" fill="#fdd835" transform="rotate(-32 25 166)"/>
+    <ellipse cx="137" cy="149" rx="21" ry="31" fill="#e01c0e" transform="rotate(15 137 149)"/>
+    <ellipse cx="143" cy="153" rx="10" ry="22" fill="#1a9e3f" transform="rotate(20 143 153)"/>
+    <ellipse cx="150" cy="159" rx="8"  ry="18" fill="#1565c0" transform="rotate(26 150 159)"/>
+    <ellipse cx="155" cy="166" rx="7"  ry="14" fill="#fdd835" transform="rotate(32 155 166)"/>
+    <ellipse cx="90" cy="28" rx="8"   ry="20" fill="#c01209" transform="rotate(-10 90 28)"/>
+    <ellipse cx="90" cy="24" rx="6.5" ry="19" fill="#e01c0e"/>
+    <ellipse cx="90" cy="28" rx="8"   ry="20" fill="#c01209" transform="rotate(10 90 28)"/>
+    <ellipse cx="76" cy="33" rx="6"   ry="16" fill="#e01c0e" transform="rotate(-18 76 33)"/>
+    <ellipse cx="104" cy="33" rx="6"  ry="16" fill="#e01c0e" transform="rotate(18 104 33)"/>
+    <ellipse cx="90" cy="83" rx="52" ry="54" fill="#e01c0e"/>
+    <ellipse cx="90" cy="89" rx="36" ry="32" fill="#fff8f0"/>
+    <path d="M76 101 Q90 89 104 101 Q90 123 76 101Z" fill="#c8a800"/>
+    <path d="M80 105 Q90 116 100 105 Q90 121 80 105Z" fill="#a38700"/>
+    <path d="M83 98 Q90 94 97 98" stroke="#ffe066" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <ellipse cx="85" cy="99" rx="2" ry="1.5" fill="#8a6d00" opacity="0.55"/>
+    <ellipse cx="95" cy="99" rx="2" ry="1.5" fill="#8a6d00" opacity="0.55"/>
+    ${brows[m.brow]||""}
+    <ellipse cx="72"  cy="${ey}" rx="${es}" ry="${es}" fill="white"/>
+    <ellipse cx="108" cy="${ey}" rx="${es}" ry="${es}" fill="white"/>
+    <line x1="${72-es+2}"  y1="${ey-es+2}" x2="${72-es-3}"  y2="${ey-es-5}" stroke="#1a0a00" stroke-width="2" stroke-linecap="round"/>
+    <line x1="${72-4}"     y1="${ey-es}"   x2="${72-5}"     y2="${ey-es-6}" stroke="#1a0a00" stroke-width="2" stroke-linecap="round"/>
+    <line x1="${72+2}"     y1="${ey-es}"   x2="${72+3}"     y2="${ey-es-6}" stroke="#1a0a00" stroke-width="2" stroke-linecap="round"/>
+    <line x1="${72+es-2}"  y1="${ey-es+2}" x2="${72+es+2}"  y2="${ey-es-4}" stroke="#1a0a00" stroke-width="2" stroke-linecap="round"/>
+    <line x1="${108-es+2}" y1="${ey-es+2}" x2="${108-es-3}" y2="${ey-es-5}" stroke="#1a0a00" stroke-width="2" stroke-linecap="round"/>
+    <line x1="${108-4}"    y1="${ey-es}"   x2="${108-5}"    y2="${ey-es-6}" stroke="#1a0a00" stroke-width="2" stroke-linecap="round"/>
+    <line x1="${108+2}"    y1="${ey-es}"   x2="${108+3}"    y2="${ey-es-6}" stroke="#1a0a00" stroke-width="2" stroke-linecap="round"/>
+    <line x1="${108+es-2}" y1="${ey-es+2}" x2="${108+es+2}" y2="${ey-es-4}" stroke="#1a0a00" stroke-width="2" stroke-linecap="round"/>
+    <ellipse cx="72"  cy="${ey}" rx="${es}" ry="${es}" fill="none" stroke="#1a0a00" stroke-width="2.2"/>
+    <ellipse cx="108" cy="${ey}" rx="${es}" ry="${es}" fill="none" stroke="#1a0a00" stroke-width="2.2"/>
+    <circle cx="72"    cy="${ey}"     r="5.5" fill="#1a0a00"/>
+    <circle cx="108"   cy="${ey}"     r="5.5" fill="#1a0a00"/>
+    <circle cx="74.5"  cy="${ey-2.5}" r="2.2" fill="white"/>
+    <circle cx="110.5" cy="${ey-2.5}" r="2.2" fill="white"/>
+    ${m.blush?`<ellipse cx="58" cy="95" rx="10" ry="6" fill="#ff9eb5" opacity="0.45"/>
+               <ellipse cx="122" cy="95" rx="10" ry="6" fill="#ff9eb5" opacity="0.45"/>`:""}
+    ${m.tears?`<ellipse cx="67" cy="93" rx="3" ry="5" fill="#60a5fa" opacity="0.8"/>
+               <ellipse cx="113" cy="93" rx="3" ry="5" fill="#60a5fa" opacity="0.8"/>`:""}
+    ${mouths[m.mouth]||""}
+    <line x1="72"  y1="189" x2="72"  y2="179" stroke="#c8a800" stroke-width="4" stroke-linecap="round"/>
+    <line x1="64"  y1="189" x2="72"  y2="181" stroke="#c8a800" stroke-width="3" stroke-linecap="round"/>
+    <line x1="80"  y1="189" x2="72"  y2="181" stroke="#c8a800" stroke-width="3" stroke-linecap="round"/>
+    <line x1="108" y1="189" x2="108" y2="179" stroke="#c8a800" stroke-width="4" stroke-linecap="round"/>
+    <line x1="100" y1="189" x2="108" y2="181" stroke="#c8a800" stroke-width="3" stroke-linecap="round"/>
+    <line x1="116" y1="189" x2="108" y2="181" stroke="#c8a800" stroke-width="3" stroke-linecap="round"/>
+  </svg>`;
+}
+
+function setParrotBounce(el){
+  el.querySelector("svg").classList.remove("parrot-idle","parrot-bounce");
+  void el.querySelector("svg").offsetWidth;
+  el.querySelector("svg").classList.add("parrot-bounce");
+  setTimeout(()=>{
+    if(el.querySelector("svg")){
+      el.querySelector("svg").classList.remove("parrot-bounce");
+      el.querySelector("svg").classList.add("parrot-idle");
+    }
+  },600);
+}
+
+// ════════════════════════════════════════════════════
+// PARTICLES
+// ════════════════════════════════════════════════════
+function boom(){
+  const emojis=["🎉","⭐","✨","💫","🎊","🦜","🏆"];
+  for(let i=0;i<16;i++){
+    const p=document.createElement("div");
+    p.className="particle";
+    p.textContent=emojis[i%emojis.length];
+    const dx=(Math.random()-.5)*340,dy=-(Math.random()*220+60);
+    p.style.setProperty("--dx",dx+"px");
+    p.style.setProperty("--dy",dy+"px");
+    p.style.setProperty("--rot",(Math.random()-.5)*720+"deg");
+    document.body.appendChild(p);
+    setTimeout(()=>p.remove(),1700);
+  }
+}
+
+// ════════════════════════════════════════════════════
+// MSAL LOGIN
+// ════════════════════════════════════════════════════
+async function initMSAL(){
+  if(msalApp) return;
+  msalApp = new msal.PublicClientApplication(MSAL_CONFIG);
+  await msalApp.initialize();
+  // Handle redirect
+  try{ await msalApp.handleRedirectPromise(); }catch(e){}
+}
+
+async function msLogin(){
+  const btn=document.getElementById("btn-ms-login");
+  const errEl=document.getElementById("intro-err");
+  const errTxt=document.getElementById("intro-err-text");
+  btn.disabled=true;
+  btn.textContent="⏳ Iniciando sesión…";
+  errEl.classList.remove("show");
+  try{
+    await initMSAL();
+    // Solo User.Read — no requiere admin consent
+    const result = await msalApp.loginPopup({scopes:SCOPES});
+    // Fetch user profile
+    const meRes = await fetch("https://graph.microsoft.com/v1.0/me",{
+      headers:{Authorization:`Bearer ${result.accessToken}`}
+    });
+    const me = await meRes.json();
+    const email = (me.mail||me.userPrincipalName||"").toLowerCase();
+    const domain = email.split("@")[1]||"";
+    if(!VALID_DOMAINS.includes(domain)){
+      throw new Error("Cuenta no pertenece a celaque.net o administracion.hn");
+    }
+    msUser = {
+      name: me.displayName||nameFromEmail(email),
+      email: email,
+      id: me.id,
+      token: result.accessToken
+    };
+    goToGame();
+  }catch(e){
+    errTxt.textContent = e.message||"No se pudo iniciar sesión. Intenta de nuevo.";
+    errEl.classList.add("show");
+    btn.disabled=false;
+    btn.innerHTML=`<svg class="ms-logo" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg> Iniciar sesión con Microsoft 365`;
+  }
+}
+document.getElementById("btn-ms-login").addEventListener("click",msLogin);
+
+// ════════════════════════════════════════════════════
+// GAME
+// ════════════════════════════════════════════════════
+let gameQueue=[], gameRound=0, gameScore=0, gamePhase="ready";
+let fallTimer=null, fbTimer=null, nextTimer=null;
+
+function goToGame(){
+  document.getElementById("game-avatar-initial").textContent=msUser.name[0].toUpperCase();
+  document.getElementById("game-user-name").textContent=msUser.name;
+  document.getElementById("game-user-email").textContent=msUser.email;
+  showScreen("s-game");
+  renderGameReady();
+}
+
+function renderGameReady(){
+  document.getElementById("game-inner").innerHTML=`
+    <div style="text-align:center">
+      <div id="game-parrot-ready" style="display:flex;justify-content:center;margin-bottom:10px"></div>
+      <div style="color:#fff;font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;margin-bottom:8px">¡Juego: mayITa come sano! 🦜</div>
+      <p style="color:rgba(255,255,255,.62);font-size:.87rem;line-height:1.65;margin-bottom:18px">
+        Toca la comida <strong style="color:#22c55e">saludable</strong> (frutas y semillas).<br>
+        <strong style="color:#ef4444">Evita</strong> la chatarra y objetos raros.<br>
+        Tienes <strong style="color:#fbbf24">${GAME_ROUNDS} rondas</strong>. ¡Toca rápido!
+      </p>
+      <button class="btn-primary" style="margin-top:0" onclick="startGame()">¡Jugar ahora! 🎮</button>
+    </div>`;
+  document.getElementById("game-parrot-ready").innerHTML=parrotSVG("idle",130);
+}
+
+function startGame(){
+  gameQueue=shuffle(FOODS).slice(0,GAME_ROUNDS);
+  gameRound=0; gameScore=0; gamePhase="playing";
+  renderGameArena();
+  spawnRound();
+}
+
+function renderGameArena(){
+  document.getElementById("game-inner").innerHTML=`
+    <div class="game-header">
+      <span class="game-round" id="g-round-lbl">Ronda 0/${GAME_ROUNDS}</span>
+      <span class="game-score-badge">⭐ <span id="g-score-lbl">0</span> pts</span>
+    </div>
+    <div class="game-progbar"><div class="game-progbar-fill" id="g-prog" style="width:0%"></div></div>
+    <div class="game-arena" id="g-arena">
+      <div class="parrot-game" id="g-parrot">${parrotSVG("idle",90)}</div>
+    </div>`;
+}
+
+function spawnRound(){
+  if(gameRound>=gameQueue.length){ setTimeout(()=>showGameResult(),400); return; }
+  const food=gameQueue[gameRound];
+  const left=8+Math.random()*72;
+  const dur=2.5+Math.random()*1.2;
+  const rs=(Math.random()-.5)*30+"deg";
+  const re=(Math.random()-.5)*60+"deg";
+
+  document.getElementById("g-round-lbl").textContent=`Ronda ${gameRound+1}/${GAME_ROUNDS}`;
+  document.getElementById("g-prog").style.width=`${(gameRound/GAME_ROUNDS)*100}%`;
+
+  const arena=document.getElementById("g-arena");
+  // Remove previous food
+  arena.querySelectorAll(".food-item,.game-hint,.game-fb").forEach(e=>e.remove());
+
+  const fi=document.createElement("div");
+  fi.className="food-item";
+  fi.textContent=food.e;
+  fi.style.left=left+"%";
+  fi.style.setProperty("--dur",dur+"s");
+  fi.style.setProperty("--rs",rs);
+  fi.style.setProperty("--re",re);
+  fi.addEventListener("click",()=>handleFoodClick(food,gameRound));
+  arena.appendChild(fi);
+
+  const hint=document.createElement("div");
+  hint.className="game-hint";
+  hint.textContent=food.ok?"✅ ¡Tócala!":"❌ ¡Evítala!";
+  arena.appendChild(hint);
+
+  fallTimer=setTimeout(()=>{
+    if(!document.getElementById("g-arena")) return;
+    fi.remove(); hint.remove();
+    if(food.ok){ reactGame(false,"¡Se escapó! 😅","#f97316"); }
+    else        { reactGame(true, "¡Bien esquivada! 🙅","#22c55e",true); }
+  },dur*1000+80);
+  gameRound++;
+}
+
+function handleFoodClick(food,roundIdx){
+  clearTimeout(fallTimer);
+  const arena=document.getElementById("g-arena");
+  if(!arena) return;
+  arena.querySelectorAll(".food-item,.game-hint").forEach(e=>e.remove());
+  if(food.ok){ reactGame(true,`¡Ñam! ${food.e}😋`,"#38bdf8",true); }
+  else        { reactGame(false,`¡Guácala! ${food.e}🤢`,"#ef4444"); }
+}
+
+function reactGame(good,text,color,addPoint=false){
+  clearTimeout(fallTimer); clearTimeout(fbTimer); clearTimeout(nextTimer);
+  if(addPoint){ gameScore++; document.getElementById("g-score-lbl").textContent=gameScore; }
+
+  const gp=document.getElementById("g-parrot");
+  if(gp){
+    gp.innerHTML=parrotSVG(good?"eat":"disgust",90);
+    if(!good){ gp.classList.add("shake"); setTimeout(()=>gp.classList.remove("shake"),400); }
+  }
+
+  const arena=document.getElementById("g-arena");
+  if(arena){
+    const fb=document.createElement("div");
+    fb.className="game-fb"; fb.textContent=text; fb.style.color=color;
+    arena.appendChild(fb);
+    fbTimer=setTimeout(()=>fb.remove(),900);
+  }
+
+  nextTimer=setTimeout(()=>{
+    if(gp){ gp.innerHTML=parrotSVG("idle",90); }
+    spawnRound();
+  },1000);
+}
+
+function showGameResult(){
+  const pct=Math.round((gameScore/GAME_ROUNDS)*100);
+  const won=pct>=60;
+  gameScoreFinal=gameScore;
+  document.getElementById("game-inner").innerHTML=`
+    <div style="text-align:center">
+      <div style="display:flex;justify-content:center;margin-bottom:10px">${parrotSVG(won?"excelente":"regular",130)}</div>
+      <div style="font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;color:#fff;margin-bottom:4px">${won?"¡Excelente resultado! 🏆":"¡Buen intento! 😄"}</div>
+      <div class="game-result-score" style="color:${won?"#fbbf24":"#f97316"}">${gameScore}/${GAME_ROUNDS}</div>
+      <div style="color:rgba(255,255,255,.5);font-size:.85rem;margin-bottom:14px">${pct}% de aciertos</div>
+      ${won?`<div class="motivational">💫 ${MOTIV[Math.floor(Math.random()*MOTIV.length)]}</div>`:""}
+      <button class="btn-primary" style="margin-top:0" onclick="goToQuiz()">${won?"¡Continuar a la encuesta! 🚀":"Continuar →"}</button>
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════
+// QUIZ
+// ════════════════════════════════════════════════════
+function goToQuiz(){
+  surveyAnswers=[]; currentQ=0; answering=false; selectedVal=null;
+  renderQuiz();
+  showScreen("s-quiz");
+}
+
+function renderQuiz(){
+  // Progress dots
+  const dots=document.getElementById("quiz-dots");
+  dots.innerHTML="";
+  QUESTIONS.forEach((_,i)=>{
+    const d=document.createElement("div");
+    d.className="prog-dot";
+    d.id=`dot-${i}`;
+    d.style.width=i<surveyAnswers.length?"22px":"10px";
+    if(i<surveyAnswers.length) d.style.background=getLikertByVal(surveyAnswers[i]).color;
+    else if(i===currentQ) d.style.background="rgba(255,255,255,.65)";
+    dots.appendChild(d);
+  });
+
+  document.getElementById("quiz-progress-label").textContent=`Pregunta ${currentQ+1}/${QUESTIONS.length}`;
+  document.getElementById("quiz-question").textContent=QUESTIONS[currentQ];
+  document.getElementById("quiz-parrot").innerHTML=parrotSVG("idle",180);
+
+  // Likert buttons
+  const opts=document.getElementById("likert-opts");
+  opts.innerHTML="";
+  LIKERT.forEach(lk=>{
+    const b=document.createElement("button");
+    b.className="lk-btn";
+    b.dataset.val=lk.v;
+    b.style.background=`${lk.color}22`;
+    b.style.borderColor=`${lk.color}55`;
+    b.style.color=lk.color;
+    b.innerHTML=`<span class="lk-icon">${lk.icon}</span><span class="lk-num">${lk.v}</span><span class="lk-lbl">${lk.lbl}</span>`;
+    b.addEventListener("click",()=>handleAnswer(lk.v));
+    opts.appendChild(b);
+  });
+
+  // Thumb hidden
+  document.getElementById("likert-thumb").style.display="none";
+  // Remove old bubble
+  document.getElementById("bubble-wrap").querySelector(".bubble")?.remove();
+}
+
+function handleAnswer(value){
+  if(answering) return;
+  answering=true;
+  selectedVal=value;
+
+  // Highlight selected
+  document.querySelectorAll(".lk-btn").forEach(b=>{
+    b.disabled=true;
+    if(parseInt(b.dataset.val)===value){
+      const lk=getLikertByVal(value);
+      b.classList.add("sel");
+      b.style.background=lk.color;
+      b.style.borderColor=lk.color;
+      b.style.color="#fff";
+      b.style.boxShadow=`0 8px 24px ${lk.color}55,0 0 0 4px ${lk.color}33`;
+    }
+  });
+
+  // Thumb
+  const thumb=document.getElementById("likert-thumb");
+  const lk=getLikertByVal(value);
+  thumb.style.display="block";
+  thumb.style.left=`${((value-1)/4)*100}%`;
+  thumb.style.background=lk.color;
+
+  // Parrot bounce + bubble
+  const mood=getMoodFromVal(value);
+  const qiText=REACTIONS[mood][currentQ];
+  document.getElementById("quiz-parrot").innerHTML=parrotSVG(mood,180);
+  const pSvg=document.getElementById("quiz-parrot").querySelector("svg");
+  pSvg.classList.remove("parrot-idle");
+  pSvg.classList.add("parrot-bounce");
+
+  // Bubble
+  const wrap=document.getElementById("bubble-wrap");
+  wrap.querySelector(".bubble")?.remove();
+  const bub=document.createElement("div");
+  bub.className="bubble";
+  bub.style.borderColor=lk.color;
+  bub.innerHTML=`${qiText}<div class="tail-border" style="border-top:10px solid ${lk.color}"></div><div class="tail-white"></div>`;
+  wrap.insertBefore(bub,wrap.firstChild);
+
+  if(value>=4) boom();
+
+  setTimeout(()=>{
+    bub.remove();
+    surveyAnswers.push(value);
+    answering=false; selectedVal=null;
+
+    if(surveyAnswers.length>=QUESTIONS.length){
+      document.getElementById("quiz-parrot").innerHTML=parrotSVG("done",180);
+      setTimeout(()=>goToImprovement(),700);
+    } else {
+      currentQ=surveyAnswers.length;
+      renderQuiz();
+    }
+  },2500);
+}
+
+// ════════════════════════════════════════════════════
+// IMPROVEMENT
+// ════════════════════════════════════════════════════
+function goToImprovement(){
+  improvements=[]; otherText=""; showOther=false;
+  const sc=getScore();
+  const ov=getLabel(sc);
+  const lk=getLikertByMood(ov);
+
+  // Score box
+  document.getElementById("imp-score-box").innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:1.9rem">${lk.icon}</span>
+      <div>
+        <div class="score-label">Tu calificación</div>
+        <div style="color:${lk.color};font-weight:900">${lk.lbl}</div>
+      </div>
+    </div>
+    <div><span class="score-big" style="color:${lk.color}">${sc}</span><span class="score-sub">/100</span></div>`;
+
+  // Improvement options
+  const list=document.getElementById("imp-list");
+  list.innerHTML="";
+  IMPROVEMENT_OPTIONS.forEach(opt=>{
+    const wrap=document.createElement("div");
+    const btn=document.createElement("button");
+    btn.className="imp-btn";
+    btn.innerHTML=`<div class="imp-check" id="chk-${opt.replace(/\s/g,'_')}"></div>${opt}`;
+    btn.addEventListener("click",()=>toggleImp(opt,btn,wrap));
+    wrap.appendChild(btn);
+    if(opt==="Otra"){
+      const ow=document.createElement("div");
+      ow.className="other-input-wrap";
+      ow.id="other-wrap";
+      ow.innerHTML=`<input class="input" id="other-input" placeholder="Especifica aquí..." style="font-size:.87rem;padding:10px 14px;">`;
+      ow.querySelector("input").addEventListener("input",e=>otherText=e.target.value);
+      wrap.appendChild(ow);
+    }
+    list.appendChild(wrap);
+  });
+  showScreen("s-improvement");
+}
+
+function toggleImp(opt,btn,wrap){
+  if(improvements.includes(opt)){
+    improvements=improvements.filter(x=>x!==opt);
+    btn.classList.remove("sel");
+    btn.querySelector(".imp-check").textContent="";
+    if(opt==="Otra"){ showOther=false; document.getElementById("other-wrap").classList.remove("show"); }
+  } else {
+    improvements.push(opt);
+    btn.classList.add("sel");
+    btn.querySelector(".imp-check").textContent="✓";
+    if(opt==="Otra"){ showOther=true; document.getElementById("other-wrap").classList.add("show"); }
+  }
+}
+
+function goToSuggestion(){
+  // Tags
+  const tags=document.getElementById("sug-imp-tags");
+  tags.innerHTML="";
+  if(improvements.length>0){
+    improvements.forEach(imp=>{
+      const t=document.createElement("div");
+      t.className="imp-tag";
+      t.textContent=(imp==="Otra"&&otherText)?`Otra: ${otherText}`:imp;
+      tags.appendChild(t);
+    });
+  }
+  document.getElementById("sug-parrot").innerHTML=parrotSVG("done",160);
+  document.getElementById("sug-textarea").value="";
+  document.getElementById("sug-err").classList.remove("show");
+  showScreen("s-suggestion");
+}
+
+document.getElementById("btn-submit").addEventListener("click",handleSubmit);
+document.getElementById("sug-textarea").addEventListener("input",function(){
+  if(this.value.trim()) document.getElementById("sug-err").classList.remove("show");
+});
+
+// ════════════════════════════════════════════════════
+// SUBMIT + TEAMS
+// ════════════════════════════════════════════════════
+async function handleSubmit(){
+  const sug=document.getElementById("sug-textarea").value.trim();
+  if(!sug){ document.getElementById("sug-err").classList.add("show"); return; }
+
+  showScreen("s-sending");
+
+  const sc=getScore();
+  const ov=getLabel(sc);
+  const allImp=[
+    ...improvements.filter(x=>x!=="Otra"),
+    ...(improvements.includes("Otra")&&otherText?[`Otra: ${otherText}`]:[])
+  ];
+  dbCount++;
+
+  let aiMsg="";
+  let teamsOk=false;
+
+  try{
+    // 1. Generate message with Anthropic API
+    const aiRes=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"claude-sonnet-4-20250514",
+        max_tokens:512,
+        messages:[{role:"user",content:`Genera un mensaje de agradecimiento corto en español para Teams dirigido a "${msUser.name}".
+Datos encuesta TI Celaque:
+- Puntuación: ${sc}/100 (${ov})
+- Áreas a mejorar: ${allImp.length>0?allImp.join(", "):"ninguna"}
+- Sugerencia: "${sug}"
+- Juego: ${gameScoreFinal}/${GAME_ROUNDS} aciertos
+Tono: cálido, con humor hondureño. Máximo 4 oraciones. Firmado: "Equipo de TI — mayITa 🦜"
+Solo el mensaje, sin explicaciones.`}]
+      })
+    });
+    const aiData=await aiRes.json();
+    aiMsg=aiData?.content?.[0]?.text||`¡Hola ${msUser.name}! 🦜 Gracias por completar la encuesta. Tus comentarios son valiosísimos para nosotros. ¡Hasta la próxima! — Equipo de TI — mayITa 🦜`;
+
+    // 2. Envío a Teams via Microsoft Graph API
+    // Pedimos permisos de Teams de forma incremental (solo al enviar)
+    let tokenForGraph = msUser.token;
+    let teamsPermGranted = false;
+    try {
+      const accounts = msalApp.getAllAccounts();
+      if (accounts.length > 0) {
+        // Intentar silencioso primero
+        try {
+          const tr = await msalApp.acquireTokenSilent({scopes: SCOPES_TEAMS, account: accounts[0]});
+          tokenForGraph = tr.accessToken;
+          teamsPermGranted = true;
+        } catch(silentErr) {
+          // Si falla silencioso, pedir popup incremental para Teams
+          try {
+            const tr = await msalApp.acquireTokenPopup({scopes: SCOPES_TEAMS, account: accounts[0]});
+            tokenForGraph = tr.accessToken;
+            teamsPermGranted = true;
+          } catch(popupErr) {
+            console.warn("Teams perms not granted:", popupErr.message);
+            teamsPermGranted = false;
+          }
+        }
+      }
+    } catch(e) { console.warn("Token refresh failed:", e); }
+
+    if (teamsPermGranted) {
+      const graphHeaders = {"Authorization":`Bearer ${tokenForGraph}`,"Content-Type":"application/json"};
+      try {
+        const createChatRes = await fetch("https://graph.microsoft.com/v1.0/chats", {
+          method:"POST", headers:graphHeaders,
+          body: JSON.stringify({
+            chatType:"oneOnOne",
+            members:[{
+              "@odata.type":"#microsoft.graph.aadUserConversationMember",
+              roles:["owner"],
+              "user@odata.bind":`https://graph.microsoft.com/v1.0/users('${msUser.id}')`
+            }]
+          })
+        });
+        const chatData = await createChatRes.json();
+        const chatId = chatData.id;
+        if (chatId) {
+          const msgRes = await fetch(`https://graph.microsoft.com/v1.0/chats/${chatId}/messages`, {
+            method:"POST", headers:graphHeaders,
+            body: JSON.stringify({body:{contentType:"html",content:`<p>${aiMsg.replace(/\n/g,"<br/>")}</p>`}})
+          });
+          teamsOk = msgRes.ok;
+        }
+      } catch(teamsErr) { console.warn("Teams send error:", teamsErr); }
+    }
+  } catch(e) {
+    console.error("Submit error:",e);
+    aiMsg=`¡Hola ${msUser.name}! 🦜 Gracias por tu tiempo y honestidad. Lo tomamos muy en serio. ¡Que la tecnología te sea leve! — Equipo de TI — mayITa 🦜`;
+  }
+
+  // Show done screen
+  document.getElementById("done-title").textContent=`¡Gracias, ${msUser.name}! 🎉`;
+  document.getElementById("done-parrot").innerHTML=parrotSVG("done",160);
+  document.getElementById("teams-msg-text").textContent=aiMsg;
+
+  const badge=document.getElementById("teams-status-badge");
+  if(teamsOk){
+    badge.className="teams-status ok";
+    badge.textContent=`✓ Enviado a ${msUser.email}`;
+  } else {
+    badge.className="teams-status warn";
+    badge.textContent="⚠ Verifica Teams";
+  }
+
+  document.getElementById("db-sub-text").textContent=`Registro #${dbCount} · ${new Date().toLocaleString("es-HN")}`;
+  showScreen("s-done");
+}
+
+// ════════════════════════════════════════════════════
+// RESET
+// ════════════════════════════════════════════════════
+function resetAll(){
+  msUser={name:"",email:"",id:"",token:""};
+  surveyAnswers=[]; currentQ=0; answering=false; selectedVal=null;
+  improvements=[]; otherText=""; showOther=false;
+  gameScoreFinal=0; gameQueue=[]; gameRound=0; gameScore=0;
+  document.getElementById("intro-err").classList.remove("show");
+  const btn=document.getElementById("btn-ms-login");
+  btn.disabled=false;
+  btn.innerHTML=`<svg class="ms-logo" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg> Iniciar sesión con Microsoft 365`;
+  showScreen("s-intro");
+}
+
+// ════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════
+document.getElementById("intro-parrot").innerHTML=parrotSVG("idle",180);
+initMSAL().catch(console.error);
+</script>
+</body>
+</html>
