@@ -981,25 +981,55 @@ async function handleSubmit(){
         const htmlContent = `<p>${aiMsg.replace(/\n/g,"<br/>")}</p>`;
         let sent = false;
 
-        // Estrategia 1: Buscar chats existentes
+        // Estrategia 1: Crear o encontrar chat directo con el usuario que hizo login
         try {
-          console.log("📡 Strategy 1: GET /me/chats");
-          const chatsRes = await fetch("https://graph.microsoft.com/v1.0/me/chats?$top=5", {headers: graphHeaders});
+          console.log("📡 Strategy 1: crear chat con", msUser.id);
+          // Buscar si ya existe un chat con este usuario
+          const chatsRes = await fetch(`https://graph.microsoft.com/v1.0/me/chats?$expand=members&$top=50`, {headers: graphHeaders});
           const chatsData = await chatsRes.json();
-          console.log("📡 Strategy 1 chats response:", JSON.stringify(chatsData).substring(0,300));
           const chats = chatsData.value || [];
-          if (chats.length > 0) {
-            const chat = chats.find(c => c.chatType === "oneOnOne") || chats[0];
-            console.log("📡 Strategy 1: sending to chat", chat.id);
-            const msgRes = await fetch(`https://graph.microsoft.com/v1.0/chats/${chat.id}/messages`, {
+          console.log("📡 Strategy 1 chats found:", chats.length);
+
+          // Buscar chat oneOnOne donde el otro miembro sea el usuario logueado
+          let targetChatId = null;
+          for (const chat of chats) {
+            if (chat.chatType === "oneOnOne" && chat.members) {
+              const isTarget = chat.members.some(m => m.userId === msUser.id);
+              if (isTarget) { targetChatId = chat.id; break; }
+            }
+          }
+
+          // Si no existe, crear el chat
+          if (!targetChatId) {
+            console.log("📡 Strategy 1: no existing chat, creating new one");
+            const meRes = await fetch("https://graph.microsoft.com/v1.0/me", {headers: graphHeaders});
+            const me = await meRes.json();
+            const membersArr = me.id === msUser.id
+              // mismo usuario — chat consigo mismo no permitido, usar solo un miembro
+              ? [{"@odata.type":"#microsoft.graph.aadUserConversationMember","roles":["owner"],"user@odata.bind":`https://graph.microsoft.com/v1.0/users('${msUser.id}')`}]
+              // usuarios diferentes — chat entre admin y el usuario
+              : [
+                  {"@odata.type":"#microsoft.graph.aadUserConversationMember","roles":["owner"],"user@odata.bind":`https://graph.microsoft.com/v1.0/users('${me.id}')`},
+                  {"@odata.type":"#microsoft.graph.aadUserConversationMember","roles":["owner"],"user@odata.bind":`https://graph.microsoft.com/v1.0/users('${msUser.id}')`}
+                ];
+            const createRes = await fetch("https://graph.microsoft.com/v1.0/chats", {
+              method:"POST", headers:graphHeaders,
+              body: JSON.stringify({chatType:"oneOnOne", members: membersArr})
+            });
+            const chatData = await createRes.json();
+            console.log("📡 Strategy 1 create chat:", createRes.status, chatData.id);
+            targetChatId = chatData.id;
+          }
+
+          if (targetChatId) {
+            console.log("📡 Strategy 1: sending to chat", targetChatId);
+            const msgRes = await fetch(`https://graph.microsoft.com/v1.0/chats/${targetChatId}/messages`, {
               method:"POST", headers:graphHeaders,
               body: JSON.stringify({body:{contentType:"html",content:htmlContent}})
             });
             const msgData = await msgRes.json();
             console.log("📡 Strategy 1 msg response:", msgRes.status, JSON.stringify(msgData).substring(0,200));
             if (msgRes.ok) { teamsOk = true; sent = true; console.log("✅ Strategy 1 SUCCESS"); }
-          } else {
-            console.log("📡 Strategy 1: no chats found");
           }
         } catch(e1) { console.warn("❌ Strategy 1 failed:", e1); }
 
