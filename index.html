@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>mayITa te escucha — TI Celaque</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.27.0/lib/msal-browser.min.js"></script>
+<link rel="stylesheet" href="assets/css/styles.css"/>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════ SCREEN: INTRO -->
+<div id="s-intro" class="card screen active">
+  <div class="page-title">mayITa <span>te escucha!</span></div>
+  <div class="section-sub">Departamento de TI — Celaque</div>
+  <div class="parrot-wrap"><div id="intro-parrot"></div></div>
+  <p class="step-desc">
+    ¡Hola! Soy <strong style="color:#ff8c42">mayITa</strong><br>
+    Primero jugaremos, luego <strong style="color:#fff">5 preguntas</strong> rápidas.
+  </p>
+  <div id="intro-err" class="err-msg">⚠ <span id="intro-err-text"></span></div>
+  <button class="btn-ms" id="btn-ms-login">
+    <svg class="ms-logo" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+    Iniciar sesión con Microsoft 365
+  </button>
+  <div class="hint">Solo cuentas @celaque.net · @administracion.hn</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ SCREEN: GAME -->
+<div id="s-game" class="card screen">
+  <div class="user-badge">
+    <div class="user-avatar" id="game-avatar-initial"></div>
+    <div class="user-name" id="game-user-name"></div>
+    <div class="user-email" id="game-user-email"></div>
+  </div>
+  <div id="game-inner"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ SCREEN: QUIZ -->
+<div id="s-quiz" class="card screen">
+  <div class="prog-row">
+    <span id="quiz-progress-label" style="color:rgba(255,255,255,.48);font-size:.76rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;"></span>
+    <div class="prog-dots" id="quiz-dots"></div>
+  </div>
+  <div class="bubble-wrap" id="bubble-wrap">
+    <div id="quiz-parrot"></div>
+  </div>
+  <p id="quiz-question" style="font-size:1.04rem;font-weight:800;color:#fff;text-align:center;margin-bottom:16px;line-height:1.5;"></p>
+  <div class="likert-bar"><div class="likert-thumb" id="likert-thumb"></div></div>
+  <div class="likert-options" id="likert-opts"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ SCREEN: IMPROVEMENT -->
+<div id="s-improvement" class="card screen">
+  <div class="sec-title">¿Qué podemos mejorar?</div>
+  <div class="section-sub">Selecciona todas las que apliquen</div>
+  <div class="score-box" id="imp-score-box"></div>
+  <div class="imp-list" id="imp-list"></div>
+  <button class="btn-primary" onclick="goToSuggestion()">Continuar a sugerencia →</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ SCREEN: SUGGESTION -->
+<div id="s-suggestion" class="card screen">
+  <div class="sec-title">Tu sugerencia 💡</div>
+  <div class="section-sub">Último paso · obligatorio</div>
+  <div class="parrot-wrap"><div id="sug-parrot"></div></div>
+  <div id="sug-imp-tags" class="imp-tags"></div>
+  <label class="field-label">¿Qué podría hacer mejor el equipo de TI? <span class="req">*</span></label>
+  <textarea class="input" id="sug-textarea" placeholder="Cuéntanos cómo podemos mejorar tu experiencia..."></textarea>
+  <div id="sug-err" class="err-msg">⚠ La sugerencia es obligatoria.</div>
+  <button class="btn-primary" id="btn-submit">Enviar y recibir mensaje en Teams 💬</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ SCREEN: SENDING -->
+<div id="s-sending" class="card screen" style="text-align:center;">
+  <div class="sending-parrot">⏳</div>
+  <div class="sending-title">Guardando y enviando…</div>
+  <div class="sending-sub">mayITa está generando tu mensaje de Teams con IA ✨</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ SCREEN: DONE -->
+<div id="s-done" class="card screen">
+  <div class="sec-title" id="done-title"></div>
+  <div class="section-sub">Respuestas guardadas</div>
+  <div class="parrot-wrap"><div id="done-parrot"></div></div>
+  <div class="teams-box">
+    <div class="teams-header">
+      <span style="font-size:1.1rem">💬</span>
+      <span class="teams-label">Mensaje Teams</span>
+      <span class="teams-status" id="teams-status-badge"></span>
+    </div>
+    <p class="teams-msg" id="teams-msg-text"></p>
+  </div>
+  <div class="db-row">
+    <div class="db-icon">🗄️</div>
+    <div>
+      <div class="db-title">Guardado en base de datos</div>
+      <div class="db-sub" id="db-sub-text"></div>
+    </div>
+    <div class="db-ok">✓ OK</div>
+  </div>
+  <button class="btn-primary" onclick="resetAll()">¡Nueva encuesta! 🔄</button>
+</div>
+
+<script src="assets/js/app.js" defer></script>
+</body>
+</html>
