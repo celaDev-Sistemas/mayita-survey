@@ -11,9 +11,17 @@ const MSAL_CONFIG = {
   system: { allowNativeBroker: false }
 };
 // Todos los permisos desde el login — ya tienen admin consent
-const SCOPES = ["User.Read", "Chat.ReadWrite", "ChatMessage.Send"];
-const SCOPES_TEAMS = SCOPES;
-const VALID_DOMAINS = ["celaque.net","administracion.hn"];
+const SCOPES = ["User.Read"];
+
+const VALID_DOMAINS = [
+  "celaque.net",
+  "administracion.hn"
+];
+
+const N8N_WEBHOOK_URL =
+  "https://celaque.app.n8n.cloud/webhook/mayita/encuesta";
+
+const APP_VERSION = "1.0";
 
 // ════════════════════════════════════════════════════
 // DATA
@@ -783,185 +791,141 @@ document.getElementById("sug-textarea").addEventListener("input",function(){
 // ════════════════════════════════════════════════════
 // SUBMIT + TEAMS
 // ════════════════════════════════════════════════════
-async function handleSubmit(){
-  const sug=document.getElementById("sug-textarea").value.trim();
-  if(!sug){ document.getElementById("sug-err").classList.add("show"); return; }
+async function handleSubmit() {
+  const textarea = document.getElementById("sug-textarea");
+  const botonEnviar = document.getElementById("btn-submit");
+  const errorSugerencia = document.getElementById("sug-err");
+
+  const sugerencia = textarea.value.trim();
+
+  if (!sugerencia) {
+    errorSugerencia.classList.add("show");
+    textarea.focus();
+    return;
+  }
+
+  if (surveyAnswers.length !== QUESTIONS.length) {
+    alert(
+      "No se encontraron todas las respuestas de la encuesta."
+    );
+    return;
+  }
+
+  botonEnviar.disabled = true;
+  errorSugerencia.classList.remove("show");
 
   showScreen("s-sending");
 
-  const sc=getScore();
-  const ov=getLabel(sc);
-  const allImp=[
-    ...improvements.filter(x=>x!=="Otra"),
-    ...(improvements.includes("Otra")&&otherText?[`Otra: ${otherText}`]:[])
-  ];
-  dbCount++;
+  const puntajeTotal = surveyAnswers.reduce(
+    (total, valor) => total + Number(valor || 0),
+    0
+  );
 
-  let aiMsg="";
-  let teamsOk=false;
+  const porcentajeSatisfaccion = getScore();
 
-  // Generar mensaje localmente (la API de Anthropic no se puede llamar
-  // directamente desde el browser por CORS — se necesitaría un backend)
-  const scoreEmoji = sc >= 80 ? "🌟" : sc >= 60 ? "😊" : sc >= 40 ? "🙏" : "💪";
-  const scoreWord  = sc >= 80 ? "excelente" : sc >= 60 ? "muy buena" : sc >= 40 ? "regular" : "con áreas importantes a mejorar";
-  const impText    = allImp.length > 0 ? ` Tomamos nota especialmente de: ${allImp.join(", ")}.` : "";
-  const sugText    = sug ? ` Tu sugerencia "${sug}" será revisada por el equipo.` : "";
+  const areasMejora = improvements.filter(
+    opcion => opcion !== "Otra"
+  );
 
-  aiMsg = `¡Hola ${msUser.name}! ${scoreEmoji} Gracias por completar la encuesta de satisfacción de TI — tu calificación fue ${scoreWord} (${sc}/100).${impText}${sugText} ¡Que la tecnología te sea leve! — Equipo de TI — mayITa 🦜`;
+  const otraAreaMejora =
+    improvements.includes("Otra")
+      ? otherText.trim()
+      : "";
 
-  // 2. Envío a Teams via Microsoft Graph API
-  let tokenForGraph = msUser.token;
+  const payload = {
+    usuario: {
+      nombre: msUser.name,
+      correo: msUser.email,
+      entraId: msUser.id
+    },
+
+    respuestas: {
+      tiempoRespuesta:
+        Number(surveyAnswers[0] || 0),
+
+      resolucionEfectiva:
+        Number(surveyAnswers[1] || 0),
+
+      comunicacionClara:
+        Number(surveyAnswers[2] || 0),
+
+      satisfaccionSolucion:
+        Number(surveyAnswers[3] || 0),
+
+      recomendariaServicio:
+        Number(surveyAnswers[4] || 0)
+    },
+
+    puntajeTotal,
+    porcentajeSatisfaccion,
+    areasMejora,
+    otraAreaMejora,
+    sugerencia,
+
+    puntajeJuego:
+      Number(gameScoreFinal || 0),
+
+    origen: "GitHub Pages",
+    versionApp: APP_VERSION
+  };
+
   try {
-    const accounts = msalApp.getAllAccounts();
-    if (accounts.length > 0) {
-      const tr = await msalApp.acquireTokenSilent({scopes: SCOPES, account: accounts[0]});
-      tokenForGraph = tr.accessToken;
-    }
-  } catch(e) {
-    console.warn("Silent token failed, using login token:", e);
-    tokenForGraph = msUser.token; // fallback to original login token
+    const resultado =
+      await guardarEncuestaEnN8n(payload);
+
+    dbCount = Number(
+      resultado.respuestasGuardadas || 5
+    );
+
+    document.getElementById(
+      "done-title"
+    ).textContent =
+      `¡Gracias, ${msUser.name}! 🎉`;
+
+    document.getElementById(
+      "done-parrot"
+    ).innerHTML =
+      parrotSVG("done", 160);
+
+    const badge = document.getElementById(
+      "teams-status-badge"
+    );
+
+    badge.className = "teams-status ok";
+    badge.textContent = "✓ Guardada";
+
+    document.getElementById(
+      "teams-msg-text"
+    ).textContent =
+      "Tu opinión fue registrada correctamente y será revisada por el equipo de TI.";
+
+    document.getElementById(
+      "db-sub-text"
+    ).textContent =
+      `Encuesta ${resultado.codigoEncuesta} · ` +
+      `${dbCount} respuestas guardadas · ` +
+      `${new Date().toLocaleString("es-HN")}`;
+
+    showScreen("s-done");
+
+  } catch (error) {
+    console.error(
+      "Error al guardar la encuesta:",
+      error
+    );
+
+    showScreen("s-suggestion");
+
+    botonEnviar.disabled = false;
+
+    errorSugerencia.textContent =
+      `⚠ No pudimos guardar la encuesta. ${
+        error.message ||
+        "Intenta nuevamente."
+      }`;
+
+    errorSugerencia.classList.add("show");
   }
-
-    const teamsPermGranted = !!tokenForGraph;
-    console.log("🔑 Token for Graph:", tokenForGraph ? "OK ("+tokenForGraph.substring(0,20)+"...)" : "MISSING");
-    if (teamsPermGranted) {
-      const graphHeaders = {"Authorization":`Bearer ${tokenForGraph}`,"Content-Type":"application/json"};
-      try {
-        const htmlContent = `<p>${aiMsg.replace(/\n/g,"<br/>")}</p>`;
-        let sent = false;
-
-        // Estrategia 1: Crear o encontrar chat directo con el usuario que hizo login
-        try {
-          console.log("📡 Strategy 1: crear chat con", msUser.id);
-          // Buscar si ya existe un chat con este usuario
-          const chatsRes = await fetch(`https://graph.microsoft.com/v1.0/me/chats?$expand=members&$top=50`, {headers: graphHeaders});
-          const chatsData = await chatsRes.json();
-          const chats = chatsData.value || [];
-          console.log("📡 Strategy 1 chats found:", chats.length);
-
-          // Buscar chat oneOnOne donde el otro miembro sea el usuario logueado
-          let targetChatId = null;
-          for (const chat of chats) {
-            if (chat.chatType === "oneOnOne" && chat.members) {
-              const isTarget = chat.members.some(m => m.userId === msUser.id);
-              if (isTarget) { targetChatId = chat.id; break; }
-            }
-          }
-
-          // Si no existe, crear el chat
-          if (!targetChatId) {
-            console.log("📡 Strategy 1: no existing chat, creating new one");
-            const meRes = await fetch("https://graph.microsoft.com/v1.0/me", {headers: graphHeaders});
-            const me = await meRes.json();
-            const membersArr = me.id === msUser.id
-              // mismo usuario — chat consigo mismo no permitido, usar solo un miembro
-              ? [{"@odata.type":"#microsoft.graph.aadUserConversationMember","roles":["owner"],"user@odata.bind":`https://graph.microsoft.com/v1.0/users('${msUser.id}')`}]
-              // usuarios diferentes — chat entre admin y el usuario
-              : [
-                  {"@odata.type":"#microsoft.graph.aadUserConversationMember","roles":["owner"],"user@odata.bind":`https://graph.microsoft.com/v1.0/users('${me.id}')`},
-                  {"@odata.type":"#microsoft.graph.aadUserConversationMember","roles":["owner"],"user@odata.bind":`https://graph.microsoft.com/v1.0/users('${msUser.id}')`}
-                ];
-            const createRes = await fetch("https://graph.microsoft.com/v1.0/chats", {
-              method:"POST", headers:graphHeaders,
-              body: JSON.stringify({chatType:"oneOnOne", members: membersArr})
-            });
-            const chatData = await createRes.json();
-            console.log("📡 Strategy 1 create chat:", createRes.status, chatData.id);
-            targetChatId = chatData.id;
-          }
-
-          if (targetChatId) {
-            console.log("📡 Strategy 1: sending to chat", targetChatId);
-            const msgRes = await fetch(`https://graph.microsoft.com/v1.0/chats/${targetChatId}/messages`, {
-              method:"POST", headers:graphHeaders,
-              body: JSON.stringify({body:{contentType:"html",content:htmlContent}})
-            });
-            const msgData = await msgRes.json();
-            console.log("📡 Strategy 1 msg response:", msgRes.status, JSON.stringify(msgData).substring(0,200));
-            if (msgRes.ok) { teamsOk = true; sent = true; console.log("✅ Strategy 1 SUCCESS"); }
-          }
-        } catch(e1) { console.warn("❌ Strategy 1 failed:", e1); }
-
-        // Estrategia 2: Crear chat oneOnOne
-        if (!sent) {
-          try {
-            console.log("📡 Strategy 2: GET /me");
-            const meRes = await fetch("https://graph.microsoft.com/v1.0/me", {headers: graphHeaders});
-            const me = await meRes.json();
-            console.log("📡 Strategy 2: me.id =", me.id, "user.id =", msUser.id);
-            const createRes = await fetch("https://graph.microsoft.com/v1.0/chats", {
-              method:"POST", headers:graphHeaders,
-              body: JSON.stringify({
-                chatType:"oneOnOne",
-                members:[
-                  {"@odata.type":"#microsoft.graph.aadUserConversationMember","roles":["owner"],"user@odata.bind":`https://graph.microsoft.com/v1.0/users('${me.id}')`},
-                  {"@odata.type":"#microsoft.graph.aadUserConversationMember","roles":["owner"],"user@odata.bind":`https://graph.microsoft.com/v1.0/users('${msUser.id}')`}
-                ]
-              })
-            });
-            const chatData = await createRes.json();
-            console.log("📡 Strategy 2 chat response:", createRes.status, JSON.stringify(chatData).substring(0,300));
-            if (chatData.id) {
-              const msgRes = await fetch(`https://graph.microsoft.com/v1.0/chats/${chatData.id}/messages`, {
-                method:"POST", headers:graphHeaders,
-                body: JSON.stringify({body:{contentType:"html",content:htmlContent}})
-              });
-              const msgData = await msgRes.json();
-              console.log("📡 Strategy 2 msg response:", msgRes.status, JSON.stringify(msgData).substring(0,200));
-              if (msgRes.ok) { teamsOk = true; sent = true; console.log("✅ Strategy 2 SUCCESS"); }
-            }
-          } catch(e2) { console.warn("❌ Strategy 2 failed:", e2); }
-        }
-
-        // Estrategia 3: Canal de Teams
-        if (!sent) {
-          try {
-            console.log("📡 Strategy 3: GET /me/joinedTeams");
-            const teamsRes = await fetch("https://graph.microsoft.com/v1.0/me/joinedTeams", {headers: graphHeaders});
-            const teamsData = await teamsRes.json();
-            console.log("📡 Strategy 3 teams:", JSON.stringify(teamsData).substring(0,300));
-            const teams = teamsData.value || [];
-            if (teams.length > 0) {
-              const channelsRes = await fetch(`https://graph.microsoft.com/v1.0/teams/${teams[0].id}/channels`, {headers: graphHeaders});
-              const channelsData = await channelsRes.json();
-              const channels = channelsData.value || [];
-              console.log("📡 Strategy 3 channels:", channels.length);
-              if (channels.length > 0) {
-                const msgRes = await fetch(`https://graph.microsoft.com/v1.0/teams/${teams[0].id}/channels/${channels[0].id}/messages`, {
-                  method:"POST", headers:graphHeaders,
-                  body: JSON.stringify({body:{contentType:"html",content:`<p><strong>${msUser.name}</strong> — ${htmlContent}</p>`}})
-                });
-                const msgData = await msgRes.json();
-                console.log("📡 Strategy 3 msg response:", msgRes.status, JSON.stringify(msgData).substring(0,200));
-                if (msgRes.ok) { teamsOk = true; console.log("✅ Strategy 3 SUCCESS"); }
-              }
-            }
-          } catch(e3) { console.warn("❌ Strategy 3 failed:", e3); }
-        }
-
-        if (!teamsOk) console.error("❌ ALL STRATEGIES FAILED");
-
-      } catch(teamsErr) { console.warn("Teams send error:", teamsErr); }
-    } else {
-      console.error("❌ No token available for Graph API");
-    }
-
-  // Show done screen
-  document.getElementById("done-title").textContent=`¡Gracias, ${msUser.name}! 🎉`;
-  document.getElementById("done-parrot").innerHTML=parrotSVG("done",160);
-  document.getElementById("teams-msg-text").textContent=aiMsg;
-
-  const badge=document.getElementById("teams-status-badge");
-  if(teamsOk){
-    badge.className="teams-status ok";
-    badge.textContent=`✓ Enviado a ${msUser.email}`;
-  } else {
-    badge.className="teams-status warn";
-    badge.textContent="⚠ Verifica Teams";
-  }
-
-  document.getElementById("db-sub-text").textContent=`Registro #${dbCount} · ${new Date().toLocaleString("es-HN")}`;
-  showScreen("s-done");
 }
 
 // ════════════════════════════════════════════════════
