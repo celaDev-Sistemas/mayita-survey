@@ -791,6 +791,92 @@ document.getElementById("sug-textarea").addEventListener("input",function(){
 // ════════════════════════════════════════════════════
 // SUBMIT + TEAMS
 // ════════════════════════════════════════════════════
+async function guardarEncuestaEnN8n(payload) {
+  const response = await fetch(
+    "https://celaque.app.n8n.cloud/webhook/mayita/encuesta",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    }
+  );
+
+  const textoRespuesta = await response.text();
+
+  let data = null;
+
+  try {
+    data = textoRespuesta
+      ? JSON.parse(textoRespuesta)
+      : null;
+  } catch (error) {
+    console.error(
+      "La respuesta de n8n no es JSON válido:",
+      textoRespuesta
+    );
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      data?.mensaje ||
+      `n8n respondió con estado ${response.status}`
+    );
+  }
+
+  if (!data?.ok) {
+    throw new Error(
+      data?.mensaje ||
+      "n8n no confirmó el guardado."
+    );
+  }
+
+  return data;
+}async function guardarEncuestaEnN8n(payload) {
+  const response = await fetch(
+    "https://celaque.app.n8n.cloud/webhook/mayita/encuesta",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    }
+  );
+
+  const textoRespuesta = await response.text();
+
+  let data = null;
+
+  try {
+    data = textoRespuesta
+      ? JSON.parse(textoRespuesta)
+      : null;
+  } catch (error) {
+    console.error(
+      "La respuesta de n8n no es JSON válido:",
+      textoRespuesta
+    );
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      data?.mensaje ||
+      `n8n respondió con estado ${response.status}`
+    );
+  }
+
+  if (!data?.ok) {
+    throw new Error(
+      data?.mensaje ||
+      "n8n no confirmó el guardado."
+    );
+  }
+
+  return data;
+}
+
 async function handleSubmit() {
   const textarea = document.getElementById("sug-textarea");
   const botonEnviar = document.getElementById("btn-submit");
