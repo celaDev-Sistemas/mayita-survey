@@ -942,21 +942,57 @@ function toggleImp(opt,btn,wrap){
   }
 }
 
-function goToSuggestion(){
-  // Tags
-  const tags=document.getElementById("sug-imp-tags");
-  tags.innerHTML="";
-  if(improvements.length>0){
-    improvements.forEach(imp=>{
-      const t=document.createElement("div");
-      t.className="imp-tag";
-      t.textContent=(imp==="Otra"&&otherText)?`Otra: ${otherText}`:imp;
+function goToSuggestion() {
+  if (
+    improvements.includes("Otra") &&
+    !otherText.trim()
+  ) {
+    const input =
+      document.getElementById("other-input");
+
+    input?.focus();
+    input?.classList.add("input-error");
+
+    alert(
+      "Especifica qué otra área debemos mejorar."
+    );
+
+    return;
+  }
+
+  detenerControlesFlappy();
+
+  const tags =
+    document.getElementById("sug-imp-tags");
+
+  tags.innerHTML = "";
+
+  if (improvements.length > 0) {
+    improvements.forEach((imp) => {
+      const t = document.createElement("div");
+      t.className = "imp-tag";
+
+      t.textContent =
+        imp === "Otra" && otherText
+          ? `Otra: ${otherText}`
+          : imp;
+
       tags.appendChild(t);
     });
   }
-  document.getElementById("sug-parrot").innerHTML=parrotSVG("done",160);
-  document.getElementById("sug-textarea").value="";
-  document.getElementById("sug-err").classList.remove("show");
+
+  document.getElementById(
+    "sug-parrot"
+  ).innerHTML = parrotSVG("done", 160);
+
+  document.getElementById(
+    "sug-textarea"
+  ).value = "";
+
+  document.getElementById(
+    "sug-err"
+  ).classList.remove("show");
+
   showScreen("s-suggestion");
 }
 
