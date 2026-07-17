@@ -235,6 +235,7 @@ document.getElementById("btn-ms-login").addEventListener("click",msLogin);
 // FLAPPY MAYITA — Canvas Game
 // ════════════════════════════════════════════════════
 let flappyRAF = null;
+let flappyKeyHandler = null;
 
 const FW=436, FH=320, GRAVITY=0.38, JUMP_VEL=-7.2;
 const PIPE_W=62, PIPE_GAP=132, PIPE_SPEED_BASE=2.3, PIPE_FREQ=95, SCORE_WIN=50;
@@ -658,7 +659,7 @@ function flappyJump(){
 }
 
 async function showFlappyResult(won){
-    cancelAnimationFrame(flappyRAF);
+detenerControlesFlappy();
   gameScoreFinal=fb.score;
   const score=fb.score, best=fb.best;
   const isRecord=score>0&&score>=best;
@@ -699,7 +700,7 @@ async function showFlappyResult(won){
 }
 
 function renderFlappyArena(){
-  cancelAnimationFrame(flappyRAF);
+detenerControlesFlappy();
   fbReset();
   document.getElementById("game-inner").innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -713,9 +714,42 @@ function renderFlappyArena(){
   const canvas=document.getElementById("flappy-canvas");
   canvas.addEventListener("click",flappyJump);
   canvas.addEventListener("touchstart",e=>{e.preventDefault();flappyJump();},{passive:false});
-  const spaceHandler=e=>{if(e.code==="Space"||e.code==="ArrowUp"){e.preventDefault();flappyJump();}};
-  document.addEventListener("keydown",spaceHandler);
+ if (flappyKeyHandler) {
+  document.removeEventListener("keydown", flappyKeyHandler);
+}
+
+flappyKeyHandler = (e) => {
+  const tag = document.activeElement?.tagName?.toLowerCase();
+
+  const escribiendo =
+    tag === "input" ||
+    tag === "textarea" ||
+    document.activeElement?.isContentEditable;
+
+  if (escribiendo) {
+    return;
+  }
+
+  if (e.code === "Space" || e.code === "ArrowUp") {
+    e.preventDefault();
+    flappyJump();
+  }
+};
+
+document.addEventListener("keydown", flappyKeyHandler);
   flappyLoop(canvas);
+}
+function detenerControlesFlappy() {
+  cancelAnimationFrame(flappyRAF);
+
+  if (flappyKeyHandler) {
+    document.removeEventListener(
+      "keydown",
+      flappyKeyHandler
+    );
+
+    flappyKeyHandler = null;
+  }
 }
 
 function goToGame(){
@@ -727,7 +761,7 @@ function goToGame(){
 }
 
 function renderGameReady(){
-  cancelAnimationFrame(flappyRAF);
+  detenerControlesFlappy();
   fbReset();
   document.getElementById("game-inner").innerHTML=`
     <div style="text-align:center">
@@ -1164,7 +1198,7 @@ function resetAll(){
   msUser={name:"",email:"",id:"",token:""};
   surveyAnswers=[]; currentQ=0; answering=false; selectedVal=null;
   improvements=[]; otherText=""; showOther=false;
-  gameScoreFinal=0; cancelAnimationFrame(flappyRAF); fbReset();
+  gameScoreFinal=0; detenerControlesFlappy(); fbReset();
   document.getElementById("intro-err").classList.remove("show");
   const btn=document.getElementById("btn-ms-login");
   btn.disabled=false;
