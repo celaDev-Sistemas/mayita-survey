@@ -21,6 +21,12 @@ const VALID_DOMAINS = [
 const N8N_WEBHOOK_URL =
   "https://celaque.app.n8n.cloud/webhook/mayita/encuesta";
 
+  const N8N_RANKING_SAVE_URL =
+  "https://celaque.app.n8n.cloud/webhook/mayita/ranking";
+
+const N8N_RANKING_TOP_URL =
+  "https://celaque.app.n8n.cloud/webhook/mayita/ranking/top";
+
 const APP_VERSION = "1.0";
 
 // ════════════════════════════════════════════════════
@@ -479,34 +485,170 @@ function flappyLoop(canvas){
 }
 
 // ─── Ranking (localStorage) ──────────────────────────
-function saveRanking(score){
-  try{
-    const list=JSON.parse(localStorage.getItem("mayita_ranking")||"[]");
-    list.push({name:msUser.name,score,date:new Date().toLocaleDateString("es-HN")});
-    list.sort((a,b)=>b.score-a.score);
-    localStorage.setItem("mayita_ranking",JSON.stringify(list.slice(0,10)));
-  }catch(e){}
-}
-function getRanking(){
-  try{return JSON.parse(localStorage.getItem("mayita_ranking")||"[]");}catch(e){return [];}
-}
-function rankingHTML(){
-  const list=getRanking();
-  if(!list.length) return `<div style="color:rgba(255,255,255,.4);font-size:.8rem;text-align:center;padding:8px">Sé el primero en el ranking 🦜</div>`;
-  const medals=["🥇","🥈","🥉"];
-  return list.map((r,i)=>`
-    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:9px;background:${i===0?"rgba(255,215,0,.1)":i===1?"rgba(192,192,192,.07)":i===2?"rgba(205,127,50,.07)":"rgba(255,255,255,.03)"};margin-bottom:3px;">
-      <span style="font-size:.9rem;width:20px;text-align:center">${medals[i]||"#"+(i+1)}</span>
-      <span style="color:#fff;font-weight:800;font-size:.82rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.name}</span>
-      <span style="color:#ffd700;font-weight:900;font-size:.88rem">${r.score}</span>
-      <span style="color:rgba(255,255,255,.28);font-size:.7rem">${r.date}</span>
-    </div>`).join("");
+// ─── Ranking general SharePoint / n8n ──────────────────────────
+async function saveRanking(score) {
+  try {
+    const response = await fetch(N8N_RANKING_SAVE_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        usuario: {
+          nombre: msUser.name,
+          correo: msUser.email,
+          entraId: msUser.id
+        },
+        puntaje: Number(score),
+        fechaRegistro: new Date().toISOString(),
+        origen: "GitHub Pages"
+      })
+    });
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok || !data?.ok) {
+      throw new Error(
+        data?.mensaje ||
+        `No se pudo guardar el puntaje: ${response.status}`
+      );
+    }
+
+    return true;
+
+  } catch (error) {
+    console.error("Error guardando ranking:", error);
+    return false;
+  }
 }
 
-function killBird(){
-  fb.bird.vy=JUMP_VEL*0.4; fb.phase="dead"; fb.best=Math.max(fb.best,fb.score);
-  saveRanking(fb.score);
-  setTimeout(()=>{ if(fb.phase==="dead") showFlappyResult(false); },1800);
+async function getRanking() {
+  try {
+    const response = await fetch(N8N_RANKING_TOP_URL, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json"
+      },
+      cache: "no-store"
+    });
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok || !data?.ok) {
+      throw new Error(
+        data?.mensaje ||
+        `No se pudo consultar el ranking: ${response.status}`
+      );
+    }
+
+    return Array.isArray(data.ranking)
+      ? data.ranking
+      : [];
+
+  } catch (error) {
+    console.error("Error consultando ranking:", error);
+    return [];
+  }
+}
+
+function formatearFechaRanking(fecha) {
+  if (!fecha) return "";
+
+  const date = new Date(fecha);
+
+  if (Number.isNaN(date.getTime())) {
+    return fecha;
+  }
+
+  return date.toLocaleDateString("es-HN");
+}
+
+async function rankingHTML() {
+  const list = await getRanking();
+
+  if (!list.length) {
+    return `
+      <div style="
+        color:rgba(255,255,255,.4);
+        font-size:.8rem;
+        text-align:center;
+        padding:8px;
+      ">
+        Sé el primero en el ranking 🦜
+      </div>
+    `;
+  }
+
+  const medals = ["🥇", "🥈", "🥉"];
+
+  return list.map((r, i) => `
+    <div style="
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:5px 8px;
+      border-radius:9px;
+      background:${
+        i === 0
+          ? "rgba(255,215,0,.1)"
+          : i === 1
+          ? "rgba(192,192,192,.07)"
+          : i === 2
+          ? "rgba(205,127,50,.07)"
+          : "rgba(255,255,255,.03)"
+      };
+      margin-bottom:3px;
+    ">
+      <span style="
+        font-size:.9rem;
+        width:20px;
+        text-align:center;
+      ">
+        ${medals[i] || "#" + (i + 1)}
+      </span>
+
+      <span style="
+        color:#fff;
+        font-weight:800;
+        font-size:.82rem;
+        flex:1;
+        overflow:hidden;
+        text-overflow:ellipsis;
+        white-space:nowrap;
+      ">
+        ${r.name || "Usuario"}
+      </span>
+
+      <span style="
+        color:#ffd700;
+        font-weight:900;
+        font-size:.88rem;
+      ">
+        ${Number(r.score || 0)}
+      </span>
+
+      <span style="
+        color:rgba(255,255,255,.28);
+        font-size:.7rem;
+      ">
+        ${formatearFechaRanking(r.date)}
+      </span>
+    </div>
+  `).join("");
+}
+
+async function killBird() {
+  fb.bird.vy = JUMP_VEL * 0.4;
+  fb.phase = "dead";
+  fb.best = Math.max(fb.best, fb.score);
+
+  await saveRanking(fb.score);
+
+  setTimeout(() => {
+    if (fb.phase === "dead") {
+      showFlappyResult(false);
+    }
+  }, 1800);
 }
 
 function flappyJump(){
@@ -515,13 +657,14 @@ function flappyJump(){
   if(fb.phase==="dead"){fbReset();fb.phase="playing";fb.bird.vy=JUMP_VEL;}
 }
 
-function showFlappyResult(won){
-  cancelAnimationFrame(flappyRAF);
+async function showFlappyResult(won){
+    cancelAnimationFrame(flappyRAF);
   gameScoreFinal=fb.score;
   const score=fb.score, best=fb.best;
   const isRecord=score>0&&score>=best;
   const mood=won?"excelente":score>=8?"excelente":score>=4?"bueno":"regular";
   const title=won?"¡Lo lograste! 🏆🎉":score>=8?"¡Increíble vuelo! 🏆":score>=4?"¡Buen vuelo! 🎉":"¡Buen intento! 😄";
+  const rankingGeneral = await rankingHTML();
   document.getElementById("game-inner").innerHTML=`
     <div style="text-align:center">
       <div style="display:flex;justify-content:center;margin-bottom:6px">${parrotSVG(mood,96)}</div>
@@ -546,7 +689,7 @@ function showFlappyResult(won){
       ${won||score>=4?`<div class="motivational" style="margin-bottom:8px;padding:10px 12px;">💫 ${MOTIV[Math.floor(Math.random()*MOTIV.length)]}</div>`:""}
       <div style="background:rgba(255,255,255,.05);border-radius:14px;padding:10px 10px;margin-bottom:10px;text-align:left;">
         <div style="color:rgba(255,255,255,.45);font-size:.65rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:7px;text-align:center;">🏆 Ranking mayITa</div>
-        ${rankingHTML()}
+       ${rankingGeneral}
       </div>
       <button class="btn-primary" style="margin-top:0" onclick="goToQuiz()">Ir a la encuesta 📋</button>
       <button onclick="fbReset();renderFlappyArena();" style="width:100%;padding:12px;border-radius:14px;border:1.5px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:rgba(255,255,255,.72);font-family:'Nunito',sans-serif;font-weight:800;font-size:.88rem;cursor:pointer;margin-top:9px;" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.06)'">
