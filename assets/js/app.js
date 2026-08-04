@@ -33,11 +33,17 @@ const APP_VERSION = "1.0";
 // DATA
 // ════════════════════════════════════════════════════
 const QUESTIONS = [
+
   "¿Cómo fue el tiempo de respuesta del equipo de TI?",
+
   "¿El técnico resolvió tu problema de forma efectiva?",
-  "¿La comunicación del equipo de TI fue clara?",
+
+  "¿Te mantuvimos informado durante la atención de tu solicitud?",
+
   "¿Quedaste satisfecho con la solución brindada?",
-  "¿Recomendarías el servicio de TI a un colega?"
+
+  "¿Consideras que la comunicación durante la atención fue clara y cordial?"
+
 ];
 const LIKERT = [
   {v:1,lbl:"Muy malo", icon:"😠",color:"#e02020",mood:"malo1"},
