@@ -33,17 +33,30 @@ const APP_VERSION = "1.0";
 // DATA
 // ════════════════════════════════════════════════════
 const QUESTIONS = [
-
   "¿Cómo fue el tiempo de respuesta del equipo de TI?",
-
   "¿El técnico resolvió tu problema de forma efectiva?",
-
-  "¿Te mantuvimos informado durante la atención de tu solicitud?",
-
+  "¿La comunicación y el seguimiento durante la atención de tu solicitud fueron adecuados?",
   "¿Quedaste satisfecho con la solución brindada?",
-
   "¿Consideras que la comunicación durante la atención fue clara y cordial?"
+];
 
+const REQUEST_TYPES = [
+  {
+    value: "Solicitud de Mejora",
+    icon: "💡"
+  },
+  {
+    value: "Solicitud Técnica",
+    icon: "🛠️"
+  },
+  {
+    value: "Solicitud de Aplicaciones",
+    icon: "💻"
+  },
+  {
+    value: "Solicitud de Equipo",
+    icon: "🖥️"
+  }
 ];
 const LIKERT = [
   {v:1,lbl:"Muy malo", icon:"😠",color:"#e02020",mood:"malo1"},
@@ -83,6 +96,7 @@ let otherText = "";
 let showOther = false;
 let gameScoreFinal = 0;
 let dbCount = 0;
+let selectedRequestType = "";
 
 // ════════════════════════════════════════════════════
 // UTILS
@@ -787,13 +801,145 @@ function renderGameReady(){
 // ════════════════════════════════════════════════════
 // QUIZ
 // ════════════════════════════════════════════════════
-function goToQuiz(){
-  surveyAnswers=[]; currentQ=0; answering=false; selectedVal=null;
-  renderQuiz();
+function goToQuiz() {
+  surveyAnswers = [];
+  currentQ = 0;
+  answering = false;
+  selectedVal = null;
+  selectedRequestType = "";
+
   showScreen("s-quiz");
+  renderRequestTypeQuestion();
 }
 
-function renderQuiz(){
+
+function renderRequestTypeQuestion() {
+  document.getElementById(
+    "quiz-progress-label"
+  ).textContent = "Tipo de solicitud";
+
+  const dots = document.getElementById("quiz-dots");
+  dots.innerHTML = "";
+
+  const requestDot = document.createElement("div");
+
+  requestDot.className = "prog-dot";
+  requestDot.style.width = "22px";
+  requestDot.style.background =
+    "rgba(255,255,255,.65)";
+
+  dots.appendChild(requestDot);
+
+  QUESTIONS.forEach(() => {
+    const dot = document.createElement("div");
+
+    dot.className = "prog-dot";
+    dot.style.width = "10px";
+    dot.style.background =
+      "rgba(255,255,255,.18)";
+
+    dots.appendChild(dot);
+  });
+
+  document.getElementById(
+    "quiz-question"
+  ).textContent =
+    "¿En qué tipo de solicitud te brindamos apoyo?";
+
+  document.getElementById(
+    "quiz-parrot"
+  ).innerHTML = parrotSVG("idle", 180);
+
+  const likertBar =
+    document.querySelector(".likert-bar");
+
+  if (likertBar) {
+    likertBar.style.display = "none";
+  }
+
+  const opts =
+    document.getElementById("likert-opts");
+
+  opts.innerHTML = "";
+  opts.style.display = "grid";
+  opts.style.gridTemplateColumns =
+    "repeat(2, minmax(0, 1fr))";
+  opts.style.gap = "10px";
+
+  REQUEST_TYPES.forEach((requestType) => {
+    const button =
+      document.createElement("button");
+
+    button.type = "button";
+    button.className = "imp-btn";
+
+    button.style.minHeight = "76px";
+    button.style.justifyContent = "flex-start";
+    button.style.textAlign = "left";
+
+    button.innerHTML = `
+      <span style="font-size:1.45rem">
+        ${requestType.icon}
+      </span>
+
+      <span>
+        ${requestType.value}
+      </span>
+    `;
+
+    button.addEventListener("click", () => {
+      selectedRequestType =
+        requestType.value;
+
+      document
+        .querySelectorAll(
+          "#likert-opts .imp-btn"
+        )
+        .forEach((item) => {
+          item.classList.remove("sel");
+        });
+
+      button.classList.add("sel");
+
+      requestDot.style.background =
+        "#ff8c42";
+
+      setTimeout(() => {
+        currentQ = 0;
+        renderQuiz();
+      }, 350);
+    });
+
+    opts.appendChild(button);
+  });
+
+  document
+    .getElementById("bubble-wrap")
+    .querySelector(".bubble")
+    ?.remove();
+}
+
+function renderQuiz() {
+
+  const likertBar =
+
+    document.querySelector(".likert-bar");
+
+  if (likertBar) {
+
+    likertBar.style.display = "block";
+
+  }
+
+  const opts =
+
+    document.getElementById("likert-opts");
+
+  opts.style.display = "flex";
+
+  opts.style.gridTemplateColumns = "";
+
+  opts.style.gap = "6px";
   // Progress dots
   const dots=document.getElementById("quiz-dots");
   dots.innerHTML="";
@@ -812,8 +958,7 @@ function renderQuiz(){
   document.getElementById("quiz-parrot").innerHTML=parrotSVG("idle",180);
 
   // Likert buttons
-  const opts=document.getElementById("likert-opts");
-  opts.innerHTML="";
+  opts.innerHTML = "";
   LIKERT.forEach(lk=>{
     const b=document.createElement("button");
     b.className="lk-btn";
@@ -1109,6 +1254,15 @@ async function handleSubmit() {
     return;
   }
 
+if (!selectedRequestType) {
+  alert(
+    "Selecciona el tipo de solicitud en la que recibiste apoyo."
+  );
+
+  goToQuiz();
+  return;
+}
+
   if (surveyAnswers.length !== QUESTIONS.length) {
     alert(
       "No se encontraron todas las respuestas de la encuesta."
@@ -1144,22 +1298,24 @@ async function handleSubmit() {
       entraId: msUser.id
     },
 
-    respuestas: {
-      tiempoRespuesta:
-        Number(surveyAnswers[0] || 0),
+    tipoSolicitud: selectedRequestType,
 
-      resolucionEfectiva:
-        Number(surveyAnswers[1] || 0),
+respuestas: {
+  tiempoRespuesta:
+    Number(surveyAnswers[0] || 0),
 
-      comunicacionClara:
-        Number(surveyAnswers[2] || 0),
+  resolucionEfectiva:
+    Number(surveyAnswers[1] || 0),
 
-      satisfaccionSolucion:
-        Number(surveyAnswers[3] || 0),
+  comunicacionSeguimiento:
+    Number(surveyAnswers[2] || 0),
 
-      recomendariaServicio:
-        Number(surveyAnswers[4] || 0)
-    },
+  satisfaccionSolucion:
+    Number(surveyAnswers[3] || 0),
+
+  comunicacionClara:
+    Number(surveyAnswers[4] || 0)
+},
 
     puntajeTotal,
     porcentajeSatisfaccion,
@@ -1240,7 +1396,11 @@ function resetAll(){
   msUser={name:"",email:"",id:"",token:""};
   surveyAnswers=[]; currentQ=0; answering=false; selectedVal=null;
   improvements=[]; otherText=""; showOther=false;
-  gameScoreFinal=0; detenerControlesFlappy(); fbReset();
+gameScoreFinal = 0;
+selectedRequestType = "";
+
+detenerControlesFlappy();
+fbReset();
   document.getElementById("intro-err").classList.remove("show");
   const btn=document.getElementById("btn-ms-login");
   btn.disabled=false;
