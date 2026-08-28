@@ -1,0 +1,433 @@
+/* Torre de Bloques — adaptado para vivir dentro de mayITa-survey.
+   Original: Copyright (c) 2024 by Steve Gardner (https://codepen.io/ste-vg/pen/ppLQNW) */
+
+@import url("https://fonts.googleapis.com/css?family=Comfortaa");
+
+#s-tower{
+  --brand: #16A34A;
+}
+
+/* La pantalla #s-tower toma control total del viewport mientras está activa,
+   reemplazando el layout de tarjeta centrada del resto de la app. */
+#s-tower.active{
+  position:fixed;
+  inset:0;
+  z-index:50;
+  max-width:none;
+  width:100vw;
+  height:100vh;
+  margin:0;
+  padding:0;
+  border:none;
+  border-radius:0;
+  box-shadow:none;
+  backdrop-filter:none;
+  overflow:hidden;
+  font-family:"Comfortaa", cursive;
+  background:#7fb8e0;
+  animation:none;
+}
+
+/* mayITa aplica un reset global (*{box-sizing:border-box;margin:0;padding:0;})
+   que el diseño original de Torre de Bloques no tenía. Se restaura acá,
+   solo dentro de esta pantalla, para que se vea igual que en su carpeta
+   original — las reglas de #container de abajo (más específicas) siguen
+   ganando donde ya definían su propio margen. */
+#s-tower, #s-tower *{
+  box-sizing:content-box;
+}
+#s-tower p{
+  margin:1em 0;
+}
+
+#container {
+  width: 100%;
+  height: 100%;
+}
+#container #sky-decorations {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+#container #sky-bg, #container #space-bg {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transition: opacity 2.5s ease;
+}
+#container #sky-bg {
+  background: linear-gradient(to bottom, #7fb8e0 0%, #bfe0ee 55%, #eef7fa 100%);
+  opacity: 1;
+}
+#container #space-bg {
+  background: linear-gradient(to bottom, #050614 0%, #0c1230 45%, #1c2050 100%);
+  opacity: 0;
+}
+#container #stars {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  opacity: 0;
+  transition: opacity 2.5s ease;
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  background-image: radial-gradient(1.5px 1.5px at 20px 30px, #fff, transparent 60%), radial-gradient(1.5px 1.5px at 60px 120px, #fff, transparent 60%), radial-gradient(2px 2px at 100px 20px, #fff, transparent 60%), radial-gradient(1px 1px at 140px 90px, #fff, transparent 60%), radial-gradient(1.5px 1.5px at 170px 160px, #fff, transparent 60%), radial-gradient(1px 1px at 30px 170px, #fff, transparent 60%), radial-gradient(2px 2px at 120px 150px, #fff, transparent 60%), radial-gradient(1.5px 1.5px at 180px 50px, #fff, transparent 60%), radial-gradient(1px 1px at 80px 70px, #fff, transparent 60%), radial-gradient(1.5px 1.5px at 50px 90px, #fff, transparent 60%);
+}
+#container .cloud {
+  position: absolute;
+  width: 100px;
+  height: 40px;
+  background: #ffffff;
+  border-radius: 100px;
+  opacity: 0.9;
+  box-shadow: 22px -15px 0 -5px #fff, 45px 0 0 -8px #fff, -20px 8px 0 -10px #fff, 15px 10px 0 -8px #fff;
+  transition: opacity 2s ease;
+}
+#container.space .cloud {
+  opacity: 0 !important;
+}
+#container #question-cloud {
+  position: absolute;
+  top: 26%;
+  left: auto;
+  right: 4%;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(0, -20px) scale(0.9);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+#container #question-cloud.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(0, 0) scale(1);
+}
+#container .question-cloud-bubble {
+  position: relative;
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 16px 22px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  min-width: 180px;
+  max-width: 260px;
+}
+#container .question-cloud-bubble::before, #container .question-cloud-bubble::after {
+  content: "";
+  position: absolute;
+  background: #ffffff;
+  border-radius: 50%;
+}
+#container .question-cloud-bubble::before {
+  width: 22px;
+  height: 22px;
+  bottom: -14px;
+  left: 40px;
+}
+#container .question-cloud-bubble::after {
+  width: 12px;
+  height: 12px;
+  bottom: -26px;
+  left: 26px;
+}
+#container #department-select {
+  position: absolute;
+  top: 26%;
+  left: auto;
+  right: 4%;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(0, -20px) scale(0.9);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+#container #department-select.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(0, 0) scale(1);
+}
+#container #department-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  line-height: 1.35;
+  color: #333344;
+}
+#container .department-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#container .department-btn {
+  font-family: "Comfortaa", cursive;
+  font-size: 13px;
+  padding: 7px 16px;
+  border-radius: 16px;
+  border: 2px solid var(--brand);
+  background: transparent;
+  color: var(--brand);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+#container .department-btn:hover {
+  background: var(--brand);
+  color: #fff;
+}
+#container .quiz-progress {
+  margin: 0 0 10px;
+}
+#container #progress-text {
+  display: block;
+  font-size: 10.5px;
+  color: #8a8a99;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+#container .progress-track {
+  width: 100%;
+  height: 4px;
+  background: #e7e7ef;
+  border-radius: 2px;
+  overflow: hidden;
+}
+#container .progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--brand);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+#container #question-text {
+  margin: 0 0 12px;
+  font-size: 15px;
+  line-height: 1.35;
+  color: #333344;
+}
+#container #question-form.hide {
+  display: none;
+}
+#container #feedback-message {
+  display: none;
+  font-size: 17px;
+  font-weight: 700;
+  padding: 4px 0;
+}
+#container #feedback-message.visible {
+  display: block;
+}
+#container #feedback-message.correct {
+  color: #2e9e4f;
+}
+#container #feedback-message.incorrect {
+  color: #d94f4f;
+}
+#container .question-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+#container .answer-btn {
+  font-family: "Comfortaa", cursive;
+  font-size: 13px;
+  padding: 5px 16px;
+  border-radius: 16px;
+  border: 2px solid var(--brand);
+  background: transparent;
+  color: var(--brand);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+#container .answer-btn.yes:hover {
+  background: #4c9a5b;
+  border-color: #4c9a5b;
+  color: #fff;
+}
+#container .answer-btn.no:hover {
+  background: #d94f4f;
+  border-color: #d94f4f;
+  color: #fff;
+}
+#container.space #sky-bg {
+  opacity: 0;
+}
+#container.space #space-bg {
+  opacity: 1;
+}
+#container.space #stars {
+  opacity: 1;
+}
+#container #score {
+  position: absolute;
+  top: 20px;
+  width: 100%;
+  text-align: center;
+  font-size: 10vh;
+  transition: transform 0.5s ease;
+  color: #333344;
+  transform: translatey(-200px) scale(1);
+}
+#container #game {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+#container .game-over {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 46%;
+  height: 85%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+#container .game-over * {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  opacity: 0;
+  transform: translatey(-50px);
+  color: #333344;
+}
+#container .game-over-card {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 28px 34px 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+#container .game-over h2 {
+  margin: 0;
+  padding: 0;
+  font-size: 34px;
+}
+#container #game-over-title.won {
+  color: #2e9e4f;
+}
+#container #game-over-title.lost {
+  color: #d94f4f;
+}
+#container .game-over .summary-list {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+}
+#container .game-over .summary-pill {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 999px;
+}
+#container .game-over .summary-pill.correct {
+  color: #2e9e4f;
+  background: rgba(46, 158, 79, 0.12);
+}
+#container .game-over .summary-pill.incorrect {
+  color: #d94f4f;
+  background: rgba(217, 79, 79, 0.12);
+}
+#container .game-over .thanks-message {
+  margin: 16px 0 0;
+  font-size: 13px;
+  color: #52514e;
+}
+#container .restart-btn {
+  margin-top: 18px;
+  font-family: "Comfortaa", cursive;
+  font-size: 15px;
+  padding: 8px 22px;
+  border-radius: 20px;
+  border: 2px solid var(--brand);
+  background: transparent;
+  color: var(--brand);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+#container .restart-btn:hover {
+  background: var(--brand);
+  color: #fff;
+}
+#container .continue-btn {
+  margin-top: 18px;
+  font-family: "Comfortaa", cursive;
+  font-size: 15px;
+  padding: 8px 22px;
+  border-radius: 20px;
+  border: none;
+  background: var(--brand);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+#container .continue-btn:hover {
+  opacity: 0.85;
+}
+#container .game-ready {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-around;
+  pointer-events: none;
+}
+#container.ready .game-ready {
+  pointer-events: auto;
+}
+#container .game-ready #start-button {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  opacity: 0;
+  transform: translatey(-50px);
+  border: 3px solid var(--brand);
+  padding: 10px 20px;
+  background-color: transparent;
+  color: var(--brand);
+  font-size: 30px;
+}
+#container #instructions {
+  position: absolute;
+  width: 100%;
+  top: 16vh;
+  left: 0;
+  text-align: center;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  opacity: 0;
+}
+#container #instructions.hide {
+  opacity: 0 !important;
+}
+#container.playing #score, #container.resetting #score {
+  transform: translatey(0px) scale(1);
+}
+#container.playing #instructions {
+  opacity: 1;
+}
+#container.ready .game-ready #start-button {
+  opacity: 1;
+  transform: translatey(0);
+}
+#container.ended #score {
+  transform: translatey(6vh) scale(1.5);
+}
+#container.ended .game-over * {
+  opacity: 1;
+  transform: translatey(0);
+}
+#container.ended .game-over p {
+  transition-delay: 0.3s;
+}

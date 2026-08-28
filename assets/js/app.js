@@ -197,10 +197,12 @@ async function handleRedirectResult(){
     }
   }catch(e){
     console.error("Redirect handle error:", e);
-    const errEl=document.getElementById("intro-err");
-    const errTxt=document.getElementById("intro-err-text");
+    showScreen("s-choose");
+    const errEl=document.getElementById("choose-err");
+    const errTxt=document.getElementById("choose-err-text");
     errTxt.textContent = e.message||"Error al procesar el inicio de sesión.";
     errEl.classList.add("show");
+    resetChooseButtons();
   }
 }
 
@@ -212,13 +214,12 @@ async function processLoginResult(result){
   const email = (me.mail||me.userPrincipalName||"").toLowerCase();
   const domain = email.split("@")[1]||"";
   if(!VALID_DOMAINS.includes(domain)){
-    const errEl=document.getElementById("intro-err");
-    const errTxt=document.getElementById("intro-err-text");
+    showScreen("s-choose");
+    const errEl=document.getElementById("choose-err");
+    const errTxt=document.getElementById("choose-err-text");
     errTxt.textContent = "Cuenta no pertenece a celaque.net o administracion.hn";
     errEl.classList.add("show");
-    const btn=document.getElementById("btn-ms-login");
-    btn.disabled=false;
-    btn.innerHTML=`<svg class="ms-logo" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg> Iniciar sesión con Microsoft 365`;
+    resetChooseButtons();
     return;
   }
   msUser = {
@@ -227,29 +228,63 @@ async function processLoginResult(result){
     id: me.id,
     token: result.accessToken
   };
-  goToGame();
+  if(sessionStorage.getItem("mayita-intent")==="skip"){
+    sessionStorage.removeItem("mayita-intent");
+    goToQuiz();
+  }else{
+    goToGame();
+  }
 }
 
-async function msLogin(){
-  const btn=document.getElementById("btn-ms-login");
-  const errEl=document.getElementById("intro-err");
-  btn.disabled=true;
-  btn.textContent="⏳ Redirigiendo a Microsoft…";
+const CHOOSE_BUTTON_DEFAULTS={
+  "btn-choose-flappy": `<span style="font-size:1.6rem">🦜</span><span>Flappy mayITa</span>`,
+  "btn-choose-tower": `<span style="font-size:1.6rem">🏗️</span><span>Torre de Bloques</span>`,
+  "btn-choose-skip": `<span style="font-size:1.6rem">📋</span><span>Saltar juego → ir a encuesta</span>`
+};
+
+function resetChooseButtons(){
+  Object.keys(CHOOSE_BUTTON_DEFAULTS).forEach(id=>{
+    const btn=document.getElementById(id);
+    btn.disabled=false;
+    btn.innerHTML=CHOOSE_BUTTON_DEFAULTS[id];
+  });
+}
+
+const IS_LOCAL_DEV = ["localhost","127.0.0.1"].includes(window.location.hostname);
+
+async function msLogin(btn, intent){
+  const errEl=document.getElementById("choose-err");
+  document.getElementById("btn-choose-flappy").disabled=true;
+  document.getElementById("btn-choose-tower").disabled=true;
+  document.getElementById("btn-choose-skip").disabled=true;
   errEl.classList.remove("show");
+
+  if(IS_LOCAL_DEV){
+    // En local no hay forma de que Entra ID redirija de vuelta a localhost,
+    // así que simulamos un login exitoso y entramos directo al destino.
+    msUser = { name:"Dev Local", email:"dev.local@celaque.net", id:"dev-local", token:"fake-local-token" };
+    if(intent==="skip") goToQuiz(); else goToGame();
+    return;
+  }
+
+  sessionStorage.setItem("mayita-intent", intent||"game");
+  btn.innerHTML="⏳ Redirigiendo a Microsoft…";
   try{
     await initMSAL();
     // loginRedirect — redirige la misma página, evita bloqueo de popups anidados
     await msalApp.loginRedirect({scopes: SCOPES});
     // Execution stops here — Microsoft redirects back to this page
   }catch(e){
-    const errTxt=document.getElementById("intro-err-text");
+    const errTxt=document.getElementById("choose-err-text");
     errTxt.textContent = e.message||"No se pudo iniciar sesión. Intenta de nuevo.";
     errEl.classList.add("show");
-    btn.disabled=false;
-    btn.innerHTML=`<svg class="ms-logo" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg> Iniciar sesión con Microsoft 365`;
+    resetChooseButtons();
   }
 }
-document.getElementById("btn-ms-login").addEventListener("click",msLogin);
+document.getElementById("btn-start").addEventListener("click",()=>showScreen("s-choose"));
+document.getElementById("btn-choose-flappy").addEventListener("click",function(){msLogin(this,"game");});
+document.getElementById("btn-choose-tower").addEventListener("click",goToTower);
+document.getElementById("btn-choose-skip").addEventListener("click",function(){msLogin(this,"skip");});
 
 // ════════════════════════════════════════════════════
 // FLAPPY MAYITA — Canvas Game
@@ -258,7 +293,7 @@ let flappyRAF = null;
 let flappyKeyHandler = null;
 
 const FW=436, FH=320, GRAVITY=0.38, JUMP_VEL=-7.2;
-const PIPE_W=62, PIPE_GAP=132, PIPE_SPEED_BASE=2.3, PIPE_FREQ=95, SCORE_WIN=500;
+const PIPE_W=62, PIPE_GAP=132, PIPE_SPEED_BASE=2.3, PIPE_FREQ=95, SCORE_WIN=50;
 // Buildings data for pipe skins (cycling through all 11)
 const BLDGS=[
   {name:"Zorzales"},
@@ -780,6 +815,17 @@ function goToGame(){
   renderGameReady();
 }
 
+function goToTower(){
+  showScreen("s-tower");
+  if(typeof initTowerBlocks==="function") initTowerBlocks();
+}
+
+document.getElementById("tower-back-button").addEventListener("click",function(){
+  if(typeof towerGame!=="undefined" && towerGame) towerGame.resetToReady();
+  if(typeof leaveTowerBlocks==="function") leaveTowerBlocks();
+  showScreen("s-choose");
+});
+
 function renderGameReady(){
   detenerControlesFlappy();
   fbReset();
@@ -793,7 +839,6 @@ function renderGameReady(){
         Pasa <strong style="color:#22c55e">¡todos los edificios</strong> que puedas!
       </p>
       <button class="btn-primary" style="margin-top:0" onclick="renderFlappyArena()">¡Jugar! 🎮</button>
-      <button onclick="goToQuiz()" style="width:100%;padding:11px;border-radius:14px;border:1.5px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.45);font-family:'Nunito',sans-serif;font-weight:800;font-size:.88rem;cursor:pointer;margin-top:10px;transition:all .2s;" onmouseover="this.style.color='rgba(255,255,255,.75)';this.style.borderColor='rgba(255,255,255,.4)'" onmouseout="this.style.color='rgba(255,255,255,.45)';this.style.borderColor='rgba(255,255,255,.2)'">Saltar juego → ir a encuesta</button>
     </div>`;
   document.getElementById("game-parrot-ready").innerHTML=parrotSVG("idle",130);
 }
@@ -1401,10 +1446,10 @@ selectedRequestType = "";
 
 detenerControlesFlappy();
 fbReset();
+  if(typeof leaveTowerBlocks==="function") leaveTowerBlocks();
   document.getElementById("intro-err").classList.remove("show");
-  const btn=document.getElementById("btn-ms-login");
-  btn.disabled=false;
-  btn.innerHTML=`<svg class="ms-logo" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg> Iniciar sesión con Microsoft 365`;
+  document.getElementById("choose-err").classList.remove("show");
+  resetChooseButtons();
   showScreen("s-intro");
 }
 
