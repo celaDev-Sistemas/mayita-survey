@@ -292,8 +292,8 @@ document.getElementById("btn-choose-skip").addEventListener("click",function(){m
 let flappyRAF = null;
 let flappyKeyHandler = null;
 
-const FW=436, FH=320, GRAVITY=0.38, JUMP_VEL=-7.2;
-const PIPE_W=62, PIPE_GAP=132, PIPE_SPEED_BASE=2.3, PIPE_FREQ=95, SCORE_WIN=50;
+const FW=436, FH=320, GRAVITY=0.28, JUMP_VEL=-6.2;
+const PIPE_W=62, PIPE_GAP=132, PIPE_SPEED_BASE=1.6, PIPE_FREQ=95, SCORE_WIN=50;
 // Buildings data for pipe skins (cycling through all 11)
 const BLDGS=[
   {name:"Zorzales"},
