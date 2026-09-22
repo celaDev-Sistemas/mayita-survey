@@ -248,22 +248,29 @@
     id="s-quiz"
     class="card screen"
   >
-    <div class="prog-row">
-      <span
-        id="quiz-progress-label"
-        style="
-          color:rgba(255,255,255,.48);
-          font-size:.76rem;
-          font-weight:800;
-          letter-spacing:1.5px;
-          text-transform:uppercase;
-        "
-      ></span>
+<div class="prog-row">
+  <button
+    type="button"
+    class="quiz-back-btn"
+    id="quiz-back-btn"
+    onclick="goBackQuiz()"
+    aria-label="Regresar"
+  >←</button>
 
-      <div
-        class="prog-dots"
-        id="quiz-dots"
-      ></div>
+  <span
+    id="quiz-progress-label"
+    style="
+      color:rgba(255,255,255,.48);
+      font-size:.74rem;
+      font-weight:800;
+      letter-spacing:1.1px;
+      text-transform:uppercase;
+      line-height:1.4;
+    "
+  ></span>
+
+  <div class="prog-dots" id="quiz-dots"></div>
+</div>
     </div>
 
     <div
