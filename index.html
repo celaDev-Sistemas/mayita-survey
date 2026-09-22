@@ -422,83 +422,92 @@
   <!-- ═══════════════════════════════════════════════════
        PANTALLA: FINALIZADA
   ════════════════════════════════════════════════════ -->
+ <div
+  id="s-done"
+  class="card screen"
+>
   <div
-    id="s-done"
-    class="card screen"
+    class="sec-title"
+    id="done-title"
   >
-    <div
-      class="sec-title"
-      id="done-title"
-    >
-      ¡Gracias por ayudarnos a mejorar!
-    </div>
+    ¡Gracias por ayudarnos a mejorar!
+  </div>
 
-    <div class="section-sub">
-      Encuesta guardada correctamente
-    </div>
+  <div class="section-sub">
+    Encuesta guardada correctamente
+  </div>
 
-    <div class="parrot-wrap">
-      <div id="done-parrot"></div>
-    </div>
+  <div class="parrot-wrap">
+    <div id="done-parrot"></div>
+  </div>
 
-    <div class="teams-box">
-      <div class="teams-header">
-        <span style="font-size:1.1rem">
-          ✅
-        </span>
+  <div class="teams-box">
+    <div class="teams-header">
+      <span style="font-size:1.1rem">
+        ✅
+      </span>
 
-        <span class="teams-label">
-          Estado de la encuesta
-        </span>
+      <span class="teams-label">
+        Estado de la encuesta
+      </span>
 
-        <span
-          class="teams-status ok"
-          id="teams-status-badge"
-        >
-          Guardada
-        </span>
-      </div>
-
-      <p
-        class="teams-msg"
-        id="teams-msg-text"
+      <span
+        class="teams-status ok"
+        id="teams-status-badge"
       >
-        Tu opinión fue registrada correctamente.
-      </p>
+        Guardada
+      </span>
     </div>
 
-    <div class="db-row">
+    <p
+      class="teams-msg"
+      id="teams-msg-text"
+    >
+      Tu opinión fue registrada correctamente.
+    </p>
+
+    <div
+      class="db-row"
+      style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.1);"
+    >
       <div class="db-icon">
         🗄️
       </div>
 
-      <div>
-        <div class="db-title">
+      <div style="flex:1">
+        <div
+          class="db-title"
+          style="display:flex;align-items:center;gap:8px;"
+        >
           Guardado en SharePoint
+          <span
+            class="db-ok"
+            style="position:static;"
+          >
+            ✓ OK
+          </span>
         </div>
 
         <div
           class="db-sub"
           id="db-sub-text"
+          style="color:rgba(255,255,255,.85);font-size:.85rem;font-weight:700;margin-top:4px;"
         >
           Procesando información…
         </div>
       </div>
-
-      <div class="db-ok">
-        ✓ OK
-      </div>
     </div>
-
-    <button
-      type="button"
-      class="btn-primary"
-      id="btn-reset"
-      onclick="resetAll()"
-    >
-      ¡Nueva encuesta! 🔄
-    </button>
   </div>
+
+  <button
+    type="button"
+    class="btn-primary"
+    id="btn-reset"
+    onclick="resetAll()"
+  >
+    ¡Nueva encuesta! 🔄
+  </button>
+</div>
 
 
     <script
