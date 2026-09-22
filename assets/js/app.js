@@ -97,6 +97,8 @@ let showOther = false;
 let gameScoreFinal = 0;
 let dbCount = 0;
 let selectedRequestType = "";
+let selectedRequestType = "";
+let quizScreenState = "type"; // "type" | "question"
 
 // ════════════════════════════════════════════════════
 // UTILS
@@ -857,8 +859,32 @@ function goToQuiz() {
   renderRequestTypeQuestion();
 }
 
+function goBackQuiz() {
+
+  if (answering) return;
+
+  if (quizScreenState === "question") {
+
+    if (currentQ > 0) {
+      currentQ--;
+      surveyAnswers.pop();
+      renderQuiz();
+    } else {
+      selectedRequestType = "";
+      surveyAnswers = [];
+      renderRequestTypeQuestion();
+    }
+
+  } else {
+    showScreen("s-choose");
+  }
+}
+
 
 function renderRequestTypeQuestion() {
+
+  quizScreenState = "type"; 
+  
   document.getElementById(
     "quiz-progress-label"
   ).textContent = "Tipo de solicitud";
@@ -966,6 +992,8 @@ function renderRequestTypeQuestion() {
 
 function renderQuiz() {
 
+quizScreenState = "question";
+  
   const likertBar =
 
     document.querySelector(".likert-bar");
@@ -1040,6 +1068,8 @@ function handleAnswer(value){
     }
   });
 
+  document.getElementById("quiz-back-btn")?.setAttribute("disabled", "true"); 
+
   // Thumb
   const thumb=document.getElementById("likert-thumb");
   const lk=getLikertByVal(value);
@@ -1065,12 +1095,12 @@ function handleAnswer(value){
   wrap.insertBefore(bub,wrap.firstChild);
 
   if(value>=4) boom();
-
   setTimeout(()=>{
     bub.remove();
     surveyAnswers.push(value);
     answering=false; selectedVal=null;
 
+    document.getElementById("quiz-back-btn")?.removeAttribute("disabled"); 
     if(surveyAnswers.length>=QUESTIONS.length){
       document.getElementById("quiz-parrot").innerHTML=parrotSVG("done",180);
       setTimeout(()=>goToImprovement(),700);
