@@ -97,7 +97,6 @@ let showOther = false;
 let gameScoreFinal = 0;
 let dbCount = 0;
 let selectedRequestType = "";
-let selectedRequestType = "";
 let quizScreenState = "type"; // "type" | "question"
 
 // ════════════════════════════════════════════════════
