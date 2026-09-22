@@ -521,7 +521,7 @@ function flappyLoop(canvas){
     if(fb.phase==="ready"){
       ctx.fillStyle="rgba(0,0,0,.55)"; ctx.beginPath(); ctx.roundRect(FW/2-115,FH/2-46,230,92,14); ctx.fill();
       ctx.fillStyle="#ffd700"; ctx.font="bold 16px Nunito,Arial"; ctx.textAlign="center"; ctx.fillText("¡Flappy mayITa! 🦜",FW/2,FH/2-24);
-      ctx.fillStyle="rgba(255,255,255,.75)"; ctx.font="12px Arial"; ctx.fillText("Vuela entre los edificios de Tegucigalpa",FW/2,FH/2-4);
+      ctx.fillStyle="rgba(255,255,255,.75)"; ctx.font="12px Arial"; ctx.fillText("Vuela entre los edificios de Celaque",FW/2,FH/2-4);
       ctx.fillStyle="#ff8c42"; ctx.font="bold 12px Arial"; ctx.fillText("Tap  ·  Click  ·  Espacio para volar",FW/2,FH/2+18);
       ctx.fillStyle="rgba(255,255,255,.4)"; ctx.font="10px Arial"; ctx.fillText("¡Sin límite de edificios! Llega lo más lejos posible",FW/2,FH/2+36);
       ctx.textAlign="left";
@@ -765,7 +765,7 @@ detenerControlesFlappy();
     <div style="display:flex;justify-content:center;">
       <canvas id="flappy-canvas" width="${FW}" height="${FH}" style="border-radius:18px;cursor:pointer;touch-action:none;max-width:100%;"></canvas>
     </div>
-    <div style="text-align:center;margin-top:8px;color:rgba(255,255,255,.38);font-size:.76rem;font-weight:800;">Toca · Click · Espacio para volar · ¡Sin límite!</div>`;
+    <div style="text-align:center;margin-top:8px;color:rgba(255,255,255,.38);font-size:.76rem;font-weight:800;">Tap · Click · Espacio para volar · ¡Sin límite!</div>`;
   const canvas=document.getElementById("flappy-canvas");
   canvas.addEventListener("click",flappyJump);
   canvas.addEventListener("touchstart",e=>{e.preventDefault();flappyJump();},{passive:false});
@@ -835,8 +835,8 @@ function renderGameReady(){
       <div style="color:#fff;font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;margin-bottom:8px">¡Flappy mayITa! 🦜</div>
       <p style="color:rgba(255,255,255,.62);font-size:.87rem;line-height:1.65;margin-bottom:18px">
         Vuela como guacamaya entre las tuberías.<br>
-        <strong style="color:#fbbf24">Toca / click / espacio</strong> para aletear.<br>
-        Pasa <strong style="color:#22c55e">¡todos los edificios</strong> que puedas!
+        <strong style="color:#fbbf24">Tap · Click · Espacio</strong> para volar.<br>
+        ¡Pasa <strong style="color:#22c55e">todos los edificios</strong> que puedas!
       </p>
       <button class="btn-primary" style="margin-top:0" onclick="renderFlappyArena()">¡Jugar! 🎮</button>
     </div>`;
